@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--end", type=float, help="End time in seconds (Requires ffmpeg)")
     parser.add_argument("--highpass", type=int, help="Highpass filter frequency in Hz (Requires ffmpeg)")
     parser.add_argument("--lowpass", type=int, help="Lowpass filter frequency in Hz (Requires ffmpeg)")
+    parser.add_argument("--time_stretch", type=float, default=1.0, help="Speed factor (0.5=half speed, 2.0=double speed). Requires ffmpeg.")
     
     args = parser.parse_args()
     
@@ -60,15 +61,21 @@ def main():
             sys.exit(1)
             
         # 2. Ban advanced processing
-        if args.mono or args.start is not None or args.end is not None or args.highpass is not None or args.lowpass is not None:
-             print("[ERROR] FFmpeg is missing. Cannot use advanced features (--mono, --start, --end, --highpass, --lowpass).")
+        if args.mono or args.start is not None or args.end is not None or args.highpass is not None or args.lowpass is not None or args.time_stretch != 1.0:
+             print("[ERROR] FFmpeg is missing. Cannot use advanced features (--mono, --start, --end, --highpass, --lowpass, --time_stretch).")
              print("Please install FFmpeg to use these features.")
              sys.exit(1)
     
+    # --- Validate time_stretch ---
+    if args.time_stretch != 1.0:
+        if not (0.5 <= args.time_stretch <= 2.0):
+            print(f"[ERROR] --time_stretch must be between 0.5 and 2.0. (Got: {args.time_stretch})")
+            sys.exit(1)
+
     # --- File Processing ---
     final_input_for_conversion = str(input_path)
     
-    # If we need ffmpeg processing (MP3, or slicing/mono/filters requested)
+    # If we need ffmpeg processing (MP3, or slicing/mono/filters/stretch requested)
     needs_conversion = (
         input_path.suffix.lower() == ".mp3" 
         or args.mono 
@@ -76,6 +83,7 @@ def main():
         or args.end is not None
         or args.highpass is not None
         or args.lowpass is not None
+        or args.time_stretch != 1.0
     )
     
     if needs_conversion:
@@ -91,6 +99,8 @@ def main():
             filters.append(f"highpass=f={args.highpass}")
         if args.lowpass:
             filters.append(f"lowpass=f={args.lowpass}")
+        if args.time_stretch != 1.0:
+            filters.append(f"atempo={args.time_stretch}")
             
         temp_wav_path = Path("temp_conversion.wav")
         

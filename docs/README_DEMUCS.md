@@ -108,3 +108,27 @@ demucs -n htdemucs_6s "audio/my_song.mp3"
 ```bash
 python run_convert.py --input separated/htdemucs_6s/my_song/piano.wav --output piano_solo.mid
 ```
+
+## 4. (Pro) 元音源を遅くして安定化させる
+
+早いフレーズや細かい音符がダマになってしまう場合、**一時的に音源を遅くしてMIDI化** し、後で楽譜ソフト上で元に戻すのが有効です。
+`--time_stretch 0.5` を指定すると、速度が半分（2倍遅く）になります。
+
+### 実行例
+```bash
+python run_convert.py --input audio/piano.wav --output slow_piano.mid --time_stretch 0.5
+```
+
+### 楽譜ソフト(MuseScore)で元に戻す方法
+生成されたMIDIは「テンポ60で弾かれた、倍の長さの曲」になっているため、以下のいずれかで修正します。
+
+1. **テンポ表記を変える（推奨）**:
+   - 楽譜上のテンポ（BPM）を **2倍の数値** に書き換えます。
+   - 例: `BPM 60` → `BPM 120`
+   - これだけで聞こえ方は元の速さになります。
+
+2. **音価（音符の長さ）を変える**:
+   - 全選択 (`Ctrl+A`) してからメニューの「ツール」→「倍のテンポで再記譜」(Paste Half Duration) などを実行します。
+   - 音符の長さが半分になり、元の楽譜の見た目になります。
+
+※ 注意: 和音の分離精度自体は変わりません。主に「タイミングが詰まって聞こえる」現象に効果があります。
