@@ -23,7 +23,7 @@ def check_ffmpeg():
 def main():
     parser = argparse.ArgumentParser(description="Audio to MIDI Converter Wrapper")
     parser.add_argument("--input", required=True, help="Input audio file path (WAV/MP3)")
-    parser.add_argument("--output", required=True, help="Output MIDI file path (.mid)")
+    parser.add_argument("--output", help="Output MIDI file path (.mid). If omitted, saves to midi/ folder with timestamp.")
     parser.add_argument("--mono", action="store_true", help="Convert to mono before processing (Requires ffmpeg)")
     parser.add_argument("--start", type=float, help="Start time in seconds (Requires ffmpeg)")
     parser.add_argument("--end", type=float, help="End time in seconds (Requires ffmpeg)")
@@ -32,6 +32,20 @@ def main():
     
     args = parser.parse_args()
     
+    # --- Auto-generate Output Path ---
+    if not args.output:
+        import datetime
+        input_filename = Path(args.input).stem
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_filename = f"{timestamp}_{input_filename}.mid"
+        
+        # Ensure midi directory exists
+        output_dir = Path("midi")
+        output_dir.mkdir(exist_ok=True)
+        
+        args.output = str(output_dir / output_filename)
+        print(f"[INFO] Output path auto-generated: {args.output}")
+
     has_ffmpeg = check_ffmpeg()
     input_path = Path(args.input)
     temp_wav_path = None

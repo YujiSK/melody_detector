@@ -1,58 +1,30 @@
-# Sound to midi converter
+# Audio to MIDI Converter (Windows Edition)
 
-Tools to convert audio files to midi. The CLI does not require any programming. The library enables stopping the process at any intermediate step.
+Windows環境で無料で使える、高機能な「音声→MIDI変換」ツールセットです。
+Demucsによるピアノ/ボーカル分離機能も統合されています。
 
-Currently, supports monophonic audio (tunes played one note at a time).
+## Directory Structure
 
-Follow this guide for installation and usage.
+- **`audio/`**: 変換したい音声ファイル（MP3/WAV）を置く場所
+- **`midi/`**: 生成されたMIDIファイルが保存される場所
+- **`docs/`**: 説明書・ドキュメント
+    - [README_WINDOWS.md](docs/README_WINDOWS.md): 基本的なインストールと使い方
+    - [README_DEMUCS.md](docs/README_DEMUCS.md): Demucsを使った伴奏分離・高度な使い方
+- **`scripts/`**: ユーティリティスクリプト
+    - `install_demucs.bat`: Demucsのインストール
+    - `cleanup.bat`: ファイル整理用
 
-For information about how it works, read the [whitepaper](monophonic_audio_to_midi.md).
+## Quick Start
+（詳細は `docs/` 内のマニュアルを参照してください）
 
-## Quickstart guides
+1. **セットアップ**: `setup_windows.bat` を実行
+2. **変換実行**:
+   ```bash
+   python run_convert.py --input audio/my_song.mp3
+   ```
+   -> `midi/YYYYMMDD_HHMMSS_my_song.mid` が生成されます。
 
-### Installation from pip
-
-`pip install sound_to_midi`
-
-### Installation from Github repo
-
-`git clone https://github.com/tiagoft/audio_to_midi.git`
-
-`cd audio_to_midi`
-
-`python -m build`
-
-`pip install .\dist\audio_to_midi-0.0.1-py3-none-any.whl`
-
-### Usage as a Python library
-
-
-    import sys
-    import librosa
-
-    from audio_to_midi.monophonic import wave_to_midi
-
-    print("Starting...")
-    file_in = sys.argv[1]
-    file_out = sys.argv[2]
-    y, sr = librosa.load(file_in, sr=None)
-    print("Audio file loaded!")
-    midi = wave_to_midi(y, sr=sr)
-    print("Conversion finished!")
-    with open (file_out, 'wb') as f:
-        midi.writeFile(f)
-    print("Done. Exiting!")
-
-
-### Command-line interface (CLI)
-
-After installing:
-
-`w2m input_file.wav output_file.mid`
-
-(supports most common formats like wav, aiff, mp3...)
-
-
-
-
-
+## Features
+- **Auto-Timestamp**: 出力ファイル名に自動で日時が付与されます（上書き防止）
+- **Auto-Filter**: `--highpass` / `--lowpass` でノイズ除去が可能
+- **Separation**: Demucsを使ってピアノパートだけを抽出可能
