@@ -59,4 +59,24 @@ python run_convert.py --input separated/htdemucs/my_song/vocals.wav --output res
 python run_convert.py --input separated/htdemucs/my_song/other.wav --output intro_piano.mid --start 0 --end 30
 ```
 
-これで「イントロのピアノ耳コピ」が圧倒的に楽になります！
+
+## 💡 ヒント2：さらにノイズを減らす (EQフィルタ・モノラル化)
+
+`other.wav` にまだベース音が残っていたり、ステレオの位相ズレで音符が増える場合は、フィルタとモノラル化を組み合わせましょう。
+
+**推奨設定（Pro Tips）**
+- **--highpass 150〜300**: ベース・キックをカットしてコード感を残す（おすすめ: 200）
+- **--lowpass 2500〜5000**: 高音ノイズをカットしてメロディを安定させる（おすすめ: 3500）
+- **--mono**: 左右のズレをなくして音程推定を安定させる
+
+**例：最強のピアノ抽出コマンド**
+イントロ45秒、モノラル化、EQでクリーニングを全部入りで行います。
+
+```bash
+python run_convert.py --input separated/htdemucs/my_song/other.wav --output piano_pro.mid --start 0 --end 45 --mono --highpass 200 --lowpass 3500
+```
+
+> **注意点**: 
+> - `lowpass` を下げすぎるとピアノのアタック感が消えて逆に精度が落ちることがあります。
+> - `highpass` を上げすぎると左手の伴奏音符が消えることがあります。
+

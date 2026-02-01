@@ -61,6 +61,13 @@ python run_convert.py --input song.mp3 --output snippet.mid --start 0 --end 10
 python run_convert.py --input stereo.wav --output mono_result.mid --mono
 ```
 
+**5. フィルタを適用してノイズ除去（FFmpeg必須）**
+ベース音や高域ノイズをカットして、メロディ抽出の精度を上げます。
+```bat
+# 200Hz以下（ベースなど）をカット、3000Hz以上（ノイズ）をカット
+python run_convert.py --input raw.wav --output clean.mid --highpass 200 --lowpass 3000
+```
+
 ---
 
 ## 🛠️ トラブルシューティング

@@ -27,6 +27,8 @@ def main():
     parser.add_argument("--mono", action="store_true", help="Convert to mono before processing (Requires ffmpeg)")
     parser.add_argument("--start", type=float, help="Start time in seconds (Requires ffmpeg)")
     parser.add_argument("--end", type=float, help="End time in seconds (Requires ffmpeg)")
+    parser.add_argument("--highpass", type=int, help="Highpass filter frequency in Hz (Requires ffmpeg)")
+    parser.add_argument("--lowpass", type=int, help="Lowpass filter frequency in Hz (Requires ffmpeg)")
     
     args = parser.parse_args()
     
@@ -44,20 +46,22 @@ def main():
             sys.exit(1)
             
         # 2. Ban advanced processing
-        if args.mono or args.start is not None or args.end is not None:
-             print("[ERROR] FFmpeg is missing. Cannot use --mono, --start, or --end.")
+        if args.mono or args.start is not None or args.end is not None or args.highpass is not None or args.lowpass is not None:
+             print("[ERROR] FFmpeg is missing. Cannot use advanced features (--mono, --start, --end, --highpass, --lowpass).")
              print("Please install FFmpeg to use these features.")
              sys.exit(1)
     
     # --- File Processing ---
     final_input_for_conversion = str(input_path)
     
-    # If we need ffmpeg processing (MP3, or slicing/mono requested)
+    # If we need ffmpeg processing (MP3, or slicing/mono/filters requested)
     needs_conversion = (
         input_path.suffix.lower() == ".mp3" 
         or args.mono 
         or args.start is not None 
         or args.end is not None
+        or args.highpass is not None
+        or args.lowpass is not None
     )
     
     if needs_conversion:
@@ -67,6 +71,13 @@ def main():
              sys.exit(1)
              
         print("[INFO] Pre-processing audio with ffmpeg...")
+        # Add descriptive filters to logic
+        filters = []
+        if args.highpass:
+            filters.append(f"highpass=f={args.highpass}")
+        if args.lowpass:
+            filters.append(f"lowpass=f={args.lowpass}")
+            
         temp_wav_path = Path("temp_conversion.wav")
         
         cmd = ["ffmpeg", "-y", "-i", str(input_path)]
@@ -77,8 +88,14 @@ def main():
         if args.end is not None:
             cmd.extend(["-to", str(args.end)])
             
+        # Audio filters
+        audio_filters = []
         if args.mono:
+            # -ac 1 is strictly channel count, but often combined with filters
             cmd.extend(["-ac", "1"])
+        
+        if filters:
+            cmd.extend(["-af", ",".join(filters)])
             
         # Output as WAV
         cmd.append(str(temp_wav_path))
