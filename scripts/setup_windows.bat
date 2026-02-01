@@ -1,5 +1,6 @@
 @echo off
 setlocal
+pushd "%~dp0.."
 
 echo ========================================================
 echo   Audio to MIDI - Windows Setup

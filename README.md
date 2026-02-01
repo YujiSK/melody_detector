@@ -17,7 +17,7 @@ Demucsによるピアノ/ボーカル分離機能も統合されています。
 ## Quick Start
 （詳細は `docs/` 内のマニュアルを参照してください）
 
-1. **セットアップ**: `setup_windows.bat` を実行
+1. **セットアップ**: `scripts/setup_windows.bat` を実行
 2. **変換実行**:
    ```bash
    python run_convert.py --input audio/my_song.mp3

@@ -1,5 +1,6 @@
 @echo off
 setlocal
+pushd "%~dp0.."
 
 echo [INFO] Cleaning up project directory...
 
