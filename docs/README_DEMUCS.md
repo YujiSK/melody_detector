@@ -132,3 +132,25 @@ python run_convert.py --input audio/piano.wav --output slow_piano.mid --time_str
    - 音符の長さが半分になり、元の楽譜の見た目になります。
 
 ※ 注意: 和音の分離精度自体は変わりません。主に「タイミングが詰まって聞こえる」現象に効果があります。
+
+## 5. (New) 和音（コード）を含むMIDIを作成する
+
+従来の `run_convert.py` は単音（メロディ）専用でしたが、新しいオプション `--model basic_pitch` を使うと、**和音 (Polyphonic)** のMIDI化が可能になります。
+
+### 使い方
+`--model basic_pitch` を追加するだけです。
+
+```bash
+python run_convert.py --input separated/htdemucs_6s/my_song/piano.wav --output piano_chords.mid --model basic_pitch
+```
+
+### 推奨ワークフロー（ピアノ完全再現）
+1. `demucs -n htdemucs_6s ...` で `piano.wav` を分離する。
+2. 以下のコマンドで変換する：
+   ```bash
+   python run_convert.py --input separated/htdemucs_6s/my_song/piano.wav --output full_piano.mid --model basic_pitch
+   ```
+3. MuseScoreで確認する。
+
+> **Note**: `--time_stretch` や `--highpass` などのフィルタも併用可能です。
+> BasicPitchエンジンはGPUがあれば高速ですが、CPUでも動作します（少し時間がかかります）。

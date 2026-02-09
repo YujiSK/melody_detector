@@ -30,6 +30,7 @@ def main():
     parser.add_argument("--highpass", type=int, help="Highpass filter frequency in Hz (Requires ffmpeg)")
     parser.add_argument("--lowpass", type=int, help="Lowpass filter frequency in Hz (Requires ffmpeg)")
     parser.add_argument("--time_stretch", type=float, default=1.0, help="Speed factor (0.5=half speed, 2.0=double speed). Requires ffmpeg.")
+    parser.add_argument("--model", choices=["monophonic", "basic_pitch"], default="monophonic", help="Transcription model. 'monophonic' (default) or 'basic_pitch' (polyphonic/chords).")
     
     args = parser.parse_args()
     
@@ -133,20 +134,72 @@ def main():
             sys.exit(1)
 
     # --- Core Conversion ---
-    print(f"[INFO] Converting '{final_input_for_conversion}' to MIDI...")
+    print(f"[INFO] Converting '{final_input_for_conversion}' to MIDI (Model: {args.model})...")
+    
     try:
-        # Load audio using librosa (handles WAV)
-        import librosa
-        audio_data, srate = librosa.load(final_input_for_conversion, sr=None)
-        
-        # Convert
-        midi_obj = wave_to_midi(audio_data, srate=srate)
-        
-        # Save
-        with open(args.output, 'wb') as f:
-            midi_obj.writeFile(f)
+        if args.model == "basic_pitch":
+            # --- Polyphonic (BasicPitch) ---
+            # TF 2.16+ (Keras 3) requires this for legacy model loading
+            os.environ["TF_USE_LEGACY_KERAS"] = "1"
             
-        print(f"[SUCCESS] MIDI saved to: {os.path.abspath(args.output)}")
+            try:
+                from basic_pitch.inference import predict_and_save
+                from basic_pitch import ICASSP_2022_MODEL_PATH
+            except ImportError:
+                print("[ERROR] 'basic-pitch' not found.")
+                print("Please run 'setup_windows.bat' again to install polyphonic support.")
+                sys.exit(1)
+                
+            # BasicPitch outputs to a directory with a generated filename.
+            # We output to a temp dir, then move to args.output.
+            # Note: BasicPitch saves as <filename>_basic_pitch.mid
+            
+            output_path_obj = Path(args.output)
+            temp_output_dir = output_path_obj.parent
+            
+            # Predict
+            predict_and_save(
+                audio_path_list=[final_input_for_conversion],
+                output_directory=str(temp_output_dir),
+                save_midi=True,
+                sonify_midi=False,
+                save_model_outputs=False,
+                save_notes=False,
+                model_or_model_path=ICASSP_2022_MODEL_PATH,
+                sonification_samplerate=44100,
+                midi_tempo=120
+            )
+            
+            # Find the generated file. BasicPitch appends '_basic_pitch.mid' to the stem.
+            input_stem = Path(final_input_for_conversion).stem
+            generated_file = temp_output_dir / f"{input_stem}_basic_pitch.mid"
+            
+            if generated_file.exists():
+                # Rename/Move to target output
+                if generated_file != output_path_obj:
+                    # Remove target if exists (overwrite)
+                    if output_path_obj.exists():
+                        os.remove(output_path_obj)
+                    os.rename(generated_file, output_path_obj)
+                print(f"[SUCCESS] MIDI saved to: {os.path.abspath(args.output)}")
+            else:
+                print(f"[ERROR] BasicPitch completed but output file not found: {generated_file}")
+                sys.exit(1)
+
+        else:
+            # --- Monophonic (Original) ---
+            # Load audio using librosa (handles WAV)
+            import librosa
+            audio_data, srate = librosa.load(final_input_for_conversion, sr=None)
+            
+            # Convert
+            midi_obj = wave_to_midi(audio_data, srate=srate)
+            
+            # Save
+            with open(args.output, 'wb') as f:
+                midi_obj.writeFile(f)
+                
+            print(f"[SUCCESS] MIDI saved to: {os.path.abspath(args.output)}")
         
     except Exception as e:
         print(f"[ERROR] Conversion failed: {e}")

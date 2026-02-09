@@ -44,10 +44,21 @@ python -m pip install --upgrade pip
 echo [INFO] Installing requirements from requirements_windows.txt...
 pip install -r requirements_windows.txt
 
+:: Install Polyphonic Support (Spotify BasicPitch)
+echo [INFO] Installing Polyphonic Transcription support (TensorFlow, BasicPitch)...
+:: 1. TensorFlow & Keras Compatibility
+pip install "tensorflow>=2.0" tf-keras --prefer-binary
+:: 2. Audio Utilities (Install individually to avoid build failures)
+pip install pretty_midi mir_eval
+:: 3. Resampy (Often fails build on Windows, try no-build-isolation)
+pip install resampy --no-build-isolation
+:: 4. BasicPitch (No deps to avoid re-triggering numpy conflict)
+pip install basic-pitch --no-deps
+
 :: Import Verification
 echo.
 echo [INFO] Verifying installation...
-python -c "import librosa; import midiutil; import soundfile; import numpy; print('SUCCESS: All core libraries imported correctly.')"
+python -c "import librosa; import midiutil; import soundfile; import numpy; import basic_pitch; print('SUCCESS: All core libraries imported correctly.')"
 
 if %errorlevel% neq 0 (
     echo.
