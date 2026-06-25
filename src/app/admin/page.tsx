@@ -1,0 +1,72 @@
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+
+export default async function AdminPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, church_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'admin') redirect('/')
+
+  const { data: songs } = await supabase
+    .from('songs')
+    .select('id, title, title_ja, artist, status, created_at')
+    .eq('church_id', profile.church_id)
+    .order('created_at', { ascending: false })
+
+  return (
+    <div className="min-h-screen bg-gray-950">
+      <header className="px-4 pt-4 pb-3 border-b border-gray-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/" className="text-gray-400 p-1">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 5l-7 7 7 7" />
+            </svg>
+          </Link>
+          <h1 className="text-white font-semibold">管理画面</h1>
+        </div>
+        <Link
+          href="/admin/songs/new"
+          className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+        >
+          + 曲追加
+        </Link>
+      </header>
+
+      <main className="px-4 py-4">
+        <div className="space-y-2">
+          {!songs?.length && (
+            <p className="text-gray-500 text-sm text-center py-8">曲がまだ登録されていません</p>
+          )}
+          {songs?.map(song => (
+            <Link
+              key={song.id}
+              href={`/admin/songs/${song.id}`}
+              className="flex items-center gap-3 bg-gray-900 rounded-xl px-4 py-3 hover:bg-gray-800 transition-colors"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-medium truncate">{song.title}</p>
+                {song.title_ja && <p className="text-gray-400 text-xs truncate">{song.title_ja}</p>}
+              </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full shrink-0
+                ${song.status === 'ready'
+                  ? 'bg-green-900/50 text-green-400'
+                  : 'bg-yellow-900/50 text-yellow-400'
+                }`}
+              >
+                {song.status === 'ready' ? '公開中' : '準備中'}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </main>
+    </div>
+  )
+}
