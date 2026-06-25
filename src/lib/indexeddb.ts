@@ -1,8 +1,8 @@
 import { openDB, type IDBPDatabase } from 'idb'
-import type { Song, Kana, RecentSong } from '@/types'
+import type { Song, SongMaterial, RecentSong } from '@/types'
 
 const DB_NAME = 'melody-detector'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 type DB = {
   songs: {
@@ -10,9 +10,9 @@ type DB = {
     value: Song
     indexes: { 'by-church': string }
   }
-  kana: {
+  song_materials: {
     key: string
-    value: Kana
+    value: SongMaterial
     indexes: { 'by-song': string }
   }
   recents: {
@@ -32,16 +32,27 @@ function getDB() {
   if (!dbPromise) {
     dbPromise = openDB<DB>(DB_NAME, DB_VERSION, {
       upgrade(db) {
-        const songStore = db.createObjectStore('songs', { keyPath: 'id' })
-        songStore.createIndex('by-church', 'church_id')
-
-        const kanaStore = db.createObjectStore('kana', { keyPath: 'id' })
-        kanaStore.createIndex('by-song', 'song_id')
-
-        db.createObjectStore('recents', { keyPath: 'song_id' })
-
-        const favStore = db.createObjectStore('favorites', { keyPath: 'song_id' })
-        favStore.createIndex('by-user', 'user_id')
+        if (!db.objectStoreNames.contains('songs')) {
+          const songStore = db.createObjectStore('songs', { keyPath: 'id' })
+          songStore.createIndex('by-church', 'church_id')
+        }
+        // v1: kana → v2: song_materials (migration)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((db as any).objectStoreNames.contains('kana')) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ;(db as any).deleteObjectStore('kana')
+        }
+        if (!db.objectStoreNames.contains('song_materials')) {
+          const matStore = db.createObjectStore('song_materials', { keyPath: 'id' })
+          matStore.createIndex('by-song', 'song_id')
+        }
+        if (!db.objectStoreNames.contains('recents')) {
+          db.createObjectStore('recents', { keyPath: 'song_id' })
+        }
+        if (!db.objectStoreNames.contains('favorites')) {
+          const favStore = db.createObjectStore('favorites', { keyPath: 'song_id' })
+          favStore.createIndex('by-user', 'user_id')
+        }
       },
     })
   }
@@ -59,21 +70,23 @@ export const cache = {
     await db.put('songs', song)
   },
 
-  async getKana(songId: string): Promise<Kana | undefined> {
+  async getSongMaterial(songId: string): Promise<SongMaterial | undefined> {
     const db = await getDB()
-    const results = await db.getAllFromIndex('kana', 'by-song', songId)
+    const results = await db.getAllFromIndex('song_materials', 'by-song', songId)
     return results[0]
   },
 
-  async putKana(kana: Kana): Promise<void> {
+  async putSongMaterial(material: SongMaterial): Promise<void> {
     const db = await getDB()
-    await db.put('kana', kana)
+    await db.put('song_materials', material)
   },
 
   async getRecents(): Promise<RecentSong[]> {
     const db = await getDB()
     const all = await db.getAll('recents')
-    return all.sort((a, b) => new Date(b.viewed_at).getTime() - new Date(a.viewed_at).getTime()).slice(0, 20)
+    return all
+      .sort((a, b) => new Date(b.viewed_at).getTime() - new Date(a.viewed_at).getTime())
+      .slice(0, 20)
   },
 
   async addRecent(songId: string): Promise<void> {

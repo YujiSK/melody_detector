@@ -23,14 +23,21 @@ export async function GET(
     .eq('id', id)
     .eq('church_id', profile.church_id)
     .single()
-
   if (!song) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { data: kana } = await supabase
-    .from('kana')
+  const { data: material } = await supabase
+    .from('song_materials')
     .select('*')
     .eq('song_id', id)
     .single()
 
-  return NextResponse.json({ song, kana })
+  // 閲覧履歴更新
+  await supabase.from('user_song_activity').upsert({
+    user_id: user.id,
+    song_id: id,
+    last_viewed_at: new Date().toISOString(),
+    view_count: 1,
+  }, { onConflict: 'user_id,song_id', ignoreDuplicates: false })
+
+  return NextResponse.json({ song, material })
 }

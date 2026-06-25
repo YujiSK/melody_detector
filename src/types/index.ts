@@ -21,7 +21,7 @@ export interface Song {
   title: string
   title_ja: string | null
   artist: string | null
-  acr_id: string | null
+  acrcloud_music_id: string | null
   status: 'pending' | 'ready'
   created_at: string
   updated_at: string
@@ -39,7 +39,7 @@ export interface LyricLine {
   is_english: boolean
 }
 
-export interface Kana {
+export interface SongMaterial {
   id: string
   song_id: string
   church_id: string
@@ -49,14 +49,27 @@ export interface Kana {
   updated_at: string
 }
 
-export interface Favorite {
+export interface UserSongActivity {
   id: string
   user_id: string
   song_id: string
-  created_at: string
+  is_favorite: boolean
+  last_viewed_at: string | null
+  view_count: number
   song?: Song
 }
 
+export interface RecognitionLog {
+  id: string
+  user_id: string
+  church_id: string
+  recognized: boolean
+  acrcloud_music_id: string | null
+  matched_song_id: string | null
+  created_at: string
+}
+
+// ローカルキャッシュ用
 export interface RecentSong {
   song_id: string
   viewed_at: string

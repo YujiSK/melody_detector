@@ -14,6 +14,7 @@ async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) 
   return profile
 }
 
+// POST: 韓国語歌詞 → OpenAIでカナルビ生成 → song_materials に保存
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ songId: string }> }
@@ -25,32 +26,32 @@ export async function POST(
 
   const body = await request.json()
   const { korean_lyrics } = body
-  if (!korean_lyrics) return NextResponse.json({ error: 'korean_lyrics required' }, { status: 400 })
+  if (!korean_lyrics?.trim()) return NextResponse.json({ error: 'korean_lyrics required' }, { status: 400 })
 
   const sections = await generateKana(korean_lyrics)
 
   const { data: existing } = await supabase
-    .from('kana')
+    .from('song_materials')
     .select('id')
     .eq('song_id', songId)
     .single()
 
-  let kana
+  let material
   if (existing) {
     const { data } = await supabase
-      .from('kana')
+      .from('song_materials')
       .update({ sections, raw_korean: korean_lyrics })
       .eq('id', existing.id)
       .select()
       .single()
-    kana = data
+    material = data
   } else {
     const { data } = await supabase
-      .from('kana')
+      .from('song_materials')
       .insert({ song_id: songId, church_id: profile.church_id, sections, raw_korean: korean_lyrics })
       .select()
       .single()
-    kana = data
+    material = data
   }
 
   await supabase
@@ -59,9 +60,10 @@ export async function POST(
     .eq('id', songId)
     .eq('church_id', profile.church_id)
 
-  return NextResponse.json({ kana })
+  return NextResponse.json({ material })
 }
 
+// PUT: カナルビを手動編集
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ songId: string }> }
@@ -75,7 +77,7 @@ export async function PUT(
   const { sections } = body
 
   const { data, error } = await supabase
-    .from('kana')
+    .from('song_materials')
     .update({ sections })
     .eq('song_id', songId)
     .eq('church_id', profile.church_id)
@@ -83,5 +85,5 @@ export async function PUT(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ kana: data })
+  return NextResponse.json({ material: data })
 }

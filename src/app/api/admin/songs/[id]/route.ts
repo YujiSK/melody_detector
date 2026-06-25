@@ -23,11 +23,11 @@ export async function PATCH(
   if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
-  const { title, title_ja, artist, acr_id, status } = body
+  const { title, title_ja, artist, acrcloud_music_id, status } = body
 
   const { data, error } = await supabase
     .from('songs')
-    .update({ title, title_ja, artist, acr_id, status })
+    .update({ title, title_ja, artist, acrcloud_music_id, status })
     .eq('id', id)
     .eq('church_id', profile.church_id)
     .select()

@@ -1,9 +1,9 @@
 'use client'
 
-import type { Kana, LyricSection } from '@/types'
+import type { SongMaterial, LyricSection } from '@/types'
 
 interface Props {
-  kana: Kana
+  material: SongMaterial
   songTitle: string
   songTitleJa?: string | null
 }
@@ -16,10 +16,10 @@ function SectionBlock({ section }: { section: LyricSection }) {
       <h3 className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">
         {section.label}
       </h3>
-      <div className="space-y-3">
+      <div className="space-y-4">
         {section.lines.map((line, i) => (
           <div key={i} className="space-y-0.5">
-            <p className={`text-white text-xl leading-relaxed font-medium ${line.is_english ? 'font-sans' : ''}`}>
+            <p className="text-white text-xl leading-relaxed font-medium">
               {line.kana}
             </p>
             {line.translation && (
@@ -34,10 +34,13 @@ function SectionBlock({ section }: { section: LyricSection }) {
   )
 }
 
-export default function KanaDisplay({ kana, songTitle, songTitleJa }: Props) {
-  const sorted = [...kana.sections].sort((a, b) => {
+export default function KanaDisplay({ material, songTitle, songTitleJa }: Props) {
+  const sorted = [...material.sections].sort((a, b) => {
     const ai = SECTION_ORDER.indexOf(a.type)
     const bi = SECTION_ORDER.indexOf(b.type)
+    if (ai === -1 && bi === -1) return 0
+    if (ai === -1) return 1
+    if (bi === -1) return -1
     return ai - bi
   })
 

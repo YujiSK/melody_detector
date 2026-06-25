@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 export default function NewSongPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ title: '', title_ja: '', artist: '', acr_id: '' })
+  const [form, setForm] = useState({ title: '', title_ja: '', artist: '', acrcloud_music_id: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -73,13 +73,14 @@ export default function NewSongPage() {
           />
         </div>
         <div>
-          <label className="text-gray-400 text-xs mb-1 block">ACRCloud ID（音声認識用）</label>
+          <label className="text-gray-400 text-xs mb-1 block">ACRCloud Music ID（音声認識紐付け用）</label>
           <input
-            value={form.acr_id}
-            onChange={e => update('acr_id', e.target.value)}
-            className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-            placeholder="ACRCloud ACRID"
+            value={form.acrcloud_music_id}
+            onChange={e => update('acrcloud_music_id', e.target.value)}
+            className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs"
+            placeholder="ACRCloudが返すacrid値"
           />
+          <p className="text-gray-600 text-xs mt-1">音声認識後に自動設定されます。手動入力も可能です。</p>
         </div>
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
