@@ -27,7 +27,7 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const publicPaths = ['/auth', '/auth/callback']
+  const publicPaths = ['/auth', '/auth/callback', '/test']
   if (!user && !publicPaths.some(p => pathname.startsWith(p))) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth'
