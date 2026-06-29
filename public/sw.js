@@ -40,9 +40,17 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then(cached => {
       if (cached) return cached
       return fetch(request).then(response => {
-        if (response.ok && request.method === 'GET') {
+        if (response.ok && request.method === 'GET' && (url.protocol === 'http:' || url.protocol === 'https:')) {
           const clone = response.clone()
-          caches.open(CACHE_NAME).then(cache => cache.put(request, clone))
+          caches.open(CACHE_NAME).then(cache => {
+            try {
+              cache.put(request, clone).catch(err => {
+                console.warn('Cache.put failed asynchronously:', err)
+              })
+            } catch (err) {
+              console.warn('Cache.put threw synchronous error:', err)
+            }
+          })
         }
         return response
       })
