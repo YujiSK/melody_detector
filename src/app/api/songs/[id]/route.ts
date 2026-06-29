@@ -38,7 +38,13 @@ export async function GET(
     .from('song_materials')
     .select('*')
     .eq('song_id', id)
-    .single()
+    .maybeSingle()
+
+  const formattedMaterial = material ? {
+    ...material,
+    sections: material.kanarubi_document,
+    raw_korean: material.source_lyrics
+  } : null
 
   // 閲覧履歴更新
   await supabase.from('user_song_activity').upsert({
@@ -48,10 +54,10 @@ export async function GET(
     view_count: 1,
   }, { onConflict: 'user_id,song_id', ignoreDuplicates: false })
 
-  const hasMaterial = !!(material && material.sections && material.sections.length > 0)
+  const hasMaterial = !!(formattedMaterial && formattedMaterial.sections && formattedMaterial.sections.length > 0)
   return NextResponse.json({
     song: formattedSong,
-    material,
+    material: formattedMaterial,
     hasMaterial,
     isReady: hasMaterial,
     materialId: material?.id || null

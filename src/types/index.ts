@@ -44,9 +44,10 @@ export interface LyricLine {
 export interface SongMaterial {
   id: string
   song_id: string
-  church_id: string
+  kanarubi_document: LyricSection[]
   sections: LyricSection[]
-  raw_korean: string | null
+  source_lyrics: string | null
+  raw_korean?: string | null
   created_at: string
   updated_at: string
 }
