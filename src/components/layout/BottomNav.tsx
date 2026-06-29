@@ -62,17 +62,27 @@ export default function BottomNav() {
           setUser(authUser)
           const { data: prof } = await supabase
             .from('profiles')
-            .select('display_name, role, church_id')
+            .select('display_name')
             .eq('id', authUser.id)
             .single()
 
+          const { data: member } = await supabase
+            .from('church_members')
+            .select('church_id, role')
+            .eq('user_id', authUser.id)
+            .single()
+
           if (prof) {
-            setProfile(prof)
-            if (prof.church_id) {
+            setProfile({
+              display_name: prof.display_name,
+              role: member?.role || 'member',
+              church_id: member?.church_id || null,
+            })
+            if (member?.church_id) {
               const { data: ch } = await supabase
                 .from('churches')
                 .select('name')
-                .eq('id', prof.church_id)
+                .eq('id', member.church_id)
                 .single()
               setChurch(ch)
             }

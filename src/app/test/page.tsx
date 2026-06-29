@@ -80,17 +80,27 @@ export default function TestPage() {
           setTestUser(user)
           const { data: prof } = await clientSupabase
             .from('profiles')
-            .select('display_name, role, church_id')
+            .select('display_name')
             .eq('id', user.id)
             .single()
 
+          const { data: member } = await clientSupabase
+            .from('church_members')
+            .select('church_id, role')
+            .eq('user_id', user.id)
+            .single()
+
           if (prof) {
-            setTestProfile(prof)
-            if (prof.church_id) {
+            setTestProfile({
+              display_name: prof.display_name,
+              role: member?.role || null,
+              church_id: member?.church_id || null,
+            })
+            if (member?.church_id) {
               const { data: ch } = await clientSupabase
                 .from('churches')
                 .select('name')
-                .eq('id', prof.church_id)
+                .eq('id', member.church_id)
                 .single()
               setTestChurch(ch)
             }
