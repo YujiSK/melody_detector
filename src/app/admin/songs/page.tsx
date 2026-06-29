@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 
 interface SongMaterialStub {
   id: string
-  sections: unknown[] | null
+  kanarubi_document: unknown
 }
 
 interface SongWithMaterials {
@@ -14,6 +14,18 @@ interface SongWithMaterials {
   artist: string | null
   created_at: string
   song_materials?: SongMaterialStub[]
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseJsonSafe(val: any) {
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val)
+    } catch {
+      return []
+    }
+  }
+  return val || []
 }
 
 export default async function AdminSongsListPage() {
@@ -30,10 +42,10 @@ export default async function AdminSongsListPage() {
   const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true'
   if (!profile || (!disableAuth && profile.role !== 'admin')) redirect('/')
 
-  // song_materials の sections 存在有無を JOIN して取得
+  // song_materials の kanarubi_document 存在有無を JOIN して取得
   const { data: songsRaw } = await supabase
     .from('songs')
-    .select('id, title_ko, title_ja, artist, created_at, song_materials(id, sections)')
+    .select('id, title_ko, title_ja, artist, created_at, song_materials(id, kanarubi_document)')
     .eq('church_id', profile.church_id)
     .order('created_at', { ascending: false })
 
@@ -65,7 +77,8 @@ export default async function AdminSongsListPage() {
           )}
           {songs.map(song => {
             const materials = song.song_materials || []
-            const hasMaterial = materials.length > 0 && Array.isArray(materials[0].sections) && materials[0].sections.length > 0
+            const parsedDoc = materials.length > 0 ? parseJsonSafe(materials[0].kanarubi_document) : []
+            const hasMaterial = Array.isArray(parsedDoc) && parsedDoc.length > 0
             const displayTitle = song.title_ko || 'No Title'
 
             return (

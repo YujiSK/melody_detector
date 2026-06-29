@@ -40,9 +40,21 @@ export async function GET(
     .eq('song_id', id)
     .maybeSingle()
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function parseJsonSafe(val: any) {
+    if (typeof val === 'string') {
+      try {
+        return JSON.parse(val)
+      } catch {
+        return []
+      }
+    }
+    return val || []
+  }
+
   const formattedMaterial = material ? {
     ...material,
-    sections: material.kanarubi_document,
+    sections: parseJsonSafe(material.kanarubi_document),
     raw_korean: material.source_lyrics
   } : null
 

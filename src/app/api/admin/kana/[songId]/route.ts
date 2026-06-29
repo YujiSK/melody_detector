@@ -159,9 +159,21 @@ export async function POST(
     material = data
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function parseJsonSafe(val: any) {
+    if (typeof val === 'string') {
+      try {
+        return JSON.parse(val)
+      } catch {
+        return []
+      }
+    }
+    return val || []
+  }
+
   const formattedMaterial = material ? {
     ...material,
-    sections: material.kanarubi_document,
+    sections: parseJsonSafe(material.kanarubi_document),
     raw_korean: material.source_lyrics
   } : null
 
@@ -195,9 +207,21 @@ export async function PUT(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function parseJsonSafe(val: any) {
+    if (typeof val === 'string') {
+      try {
+        return JSON.parse(val)
+      } catch {
+        return []
+      }
+    }
+    return val || []
+  }
+
   const formattedMaterial = data ? {
     ...data,
-    sections: data.kanarubi_document,
+    sections: parseJsonSafe(data.kanarubi_document),
     raw_korean: data.source_lyrics
   } : null
 
