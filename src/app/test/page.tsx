@@ -125,6 +125,13 @@ export default function TestPage() {
     setSetupLogs([])
     try {
       const res = await fetch('/api/setup/initial', { method: 'POST' })
+      const contentType = res.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        const text = await res.text()
+        setSetupError(`Non-JSON Response received (HTTP ${res.status}): ${text.substring(0, 300)}...`)
+        return
+      }
+
       const data = await res.json()
       if (data.ok) {
         setSetupLogs(data.logs || ['初期セットアップが完了しました'])
