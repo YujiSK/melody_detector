@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
+import { createClient } from '@/lib/supabase/client'
 
 type Status = 'idle' | 'ok' | 'error'
 
@@ -52,12 +54,56 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function TestPage() {
+  const router = useRouter()
   const { state: recState, error: recError, start, reset } = useAudioRecorder()
 
   const [supabase, setSupabase] = useState<CheckResult | null>(null)
   const [clientOrigin, setClientOrigin] = useState('')
   const [diagnoseGet, setDiagnoseGet] = useState<string>('')
   const [diagnosePost, setDiagnosePost] = useState<string>('')
+
+  // ユーザー状態診断用のステート
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [testUser, setTestUser] = useState<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [testProfile, setTestProfile] = useState<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [testChurch, setTestChurch] = useState<any>(null)
+  const [loadingUser, setLoadingUser] = useState(true)
+
+  useEffect(() => {
+    async function loadTestUser() {
+      const clientSupabase = createClient()
+      try {
+        const { data: { user } } = await clientSupabase.auth.getUser()
+        if (user) {
+          setTestUser(user)
+          const { data: prof } = await clientSupabase
+            .from('profiles')
+            .select('display_name, role, church_id')
+            .eq('id', user.id)
+            .single()
+
+          if (prof) {
+            setTestProfile(prof)
+            if (prof.church_id) {
+              const { data: ch } = await clientSupabase
+                .from('churches')
+                .select('name')
+                .eq('id', prof.church_id)
+                .single()
+              setTestChurch(ch)
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error loading test user in TestPage:', e)
+      } finally {
+        setLoadingUser(false)
+      }
+    }
+    loadTestUser()
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -230,6 +276,66 @@ export default function TestPage() {
               </div>
             </div>
           </div>
+        </Section>
+
+        {/* ログインユーザー状態診断 */}
+        <Section title="ログインユーザー状態診断">
+          {loadingUser ? (
+            <p className="text-gray-400 text-xs animate-pulse font-mono">診断中…</p>
+          ) : !testUser ? (
+            <div className="space-y-2 text-xs">
+              <p className="text-red-400 font-semibold font-sans">ログインしていません (Unauthorized)</p>
+              <button
+                onClick={() => router.push('/login')}
+                className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg transition-colors font-medium cursor-pointer"
+              >
+                ログイン画面へ
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3 text-xs font-mono">
+              {!testProfile && (
+                <div className="bg-yellow-950/30 border border-yellow-900/50 rounded-lg p-2.5 text-yellow-400 font-sans leading-relaxed">
+                  ⚠️ <strong>プロファイル未検出</strong>: profiles レコードが存在しません。新規曲登録や管理者APIへの最初のリクエスト時に自動作成されます。
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-y-1 gap-x-4">
+                <div className="text-gray-500">Auth Status:</div>
+                <div className="text-green-400 font-semibold">Logged In</div>
+                
+                <div className="text-gray-500">User ID:</div>
+                <div className="text-white truncate select-all">{testUser.id}</div>
+                
+                <div className="text-gray-500">Email:</div>
+                <div className="text-white select-all">{testUser.email}</div>
+                
+                <div className="text-gray-500">Display Name:</div>
+                <div className="text-white">{testProfile?.display_name ?? 'N/A'}</div>
+                
+                <div className="text-gray-500">Church ID:</div>
+                <div className="text-white truncate select-all">{testProfile?.church_id ?? 'N/A'}</div>
+                
+                <div className="text-gray-500">Church Name:</div>
+                <div className="text-white">{testChurch?.name ?? 'N/A'}</div>
+                
+                <div className="text-gray-500">DB Profile Role:</div>
+                <div className="text-white font-bold">{testProfile?.role ?? 'none'}</div>
+                
+                <div className="text-gray-500">Is Admin (Effective):</div>
+                <div className="text-white font-bold">
+                  {(process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true' || testProfile?.role === 'admin') ? 'true' : 'false'}
+                </div>
+
+                <div className="text-gray-500">MVP Admin Mode:</div>
+                <div className={process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true' ? "text-green-400 font-bold" : "text-gray-500"}>
+                  {process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true' ? 'ON (Bypassed)' : 'OFF'}
+                </div>
+                
+                <div className="text-gray-500">App Version:</div>
+                <div className="text-gray-400">v0.1.1</div>
+              </div>
+            </div>
+          )}
         </Section>
 
         {/* Supabase */}
