@@ -109,18 +109,23 @@ export async function GET() {
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
     .from('songs')
-    .select('*')
+    .select('*, song_materials(id, sections)')
     .eq('church_id', churchId)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // フロントエンド側で song.title を参照している箇所への後方互換エイリアス
+  // フロントエンド側で song.title / status を参照している箇所への後方互換マッピング
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const formattedSongs = (data || []).map((song: any) => ({
-    ...song,
-    title: song.title_ko
-  }))
+  const formattedSongs = (data || []).map((song: any) => {
+    const materials = song.song_materials || []
+    const hasMaterial = materials.length > 0 && Array.isArray(materials[0].sections) && materials[0].sections.length > 0
+    return {
+      ...song,
+      title: song.title_ko,
+      status: hasMaterial ? 'ready' : 'pending'
+    }
+  })
 
   return NextResponse.json({ songs: formattedSongs })
 }

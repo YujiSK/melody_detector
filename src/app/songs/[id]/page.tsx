@@ -64,7 +64,7 @@ export default function SongPage() {
     )
   }
 
-  if (!material) {
+  if (!material || !material.sections || material.sections.length === 0) {
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 px-4">
         <p className="text-white text-lg font-bold">{song.title}</p>
