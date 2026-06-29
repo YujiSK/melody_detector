@@ -4,94 +4,108 @@ import { generateKana } from '@/lib/openai'
 
 async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) {
+    return { profile: null, reason: 'No authenticated user session found' }
+  }
 
   const adminSupabase = await createAdminClient()
 
-  let { data: profile } = await adminSupabase
-    .from('profiles')
-    .select('id, church_id, role')
-    .eq('id', user.id)
-    .single()
-
-  const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true'
-
-  if (!profile) {
-    let churchId = ''
-    const { data: existingChurches } = await adminSupabase
-      .from('churches')
-      .select('id')
-      .limit(1)
-    
-    if (existingChurches && existingChurches.length > 0) {
-      churchId = existingChurches[0].id
-    } else {
-      const { data: newChurch, error: churchErr } = await adminSupabase
-        .from('churches')
-        .insert({ name: 'Default Church' })
-        .select('id')
-        .single()
-      if (newChurch) {
-        churchId = newChurch.id
-      } else {
-        console.error('Failed to create default church:', churchErr)
-        return null
-      }
-    }
-
-    const displayName = user.email?.split('@')[0] || 'User'
-    const { data: newProfile, error: profileErr } = await adminSupabase
+  try {
+    let { data: profile } = await adminSupabase
       .from('profiles')
-      .insert({
-        id: user.id,
-        church_id: churchId,
-        role: 'admin',
-        display_name: displayName,
-      })
       .select('id, church_id, role')
+      .eq('id', user.id)
       .single()
 
-    if (newProfile) {
-      profile = newProfile
-    } else {
-      console.error('Failed to create user profile:', profileErr)
-      return null
-    }
+    const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true'
 
-    await adminSupabase
-      .from('church_members')
-      .insert({
-        church_id: churchId,
-        user_id: user.id,
-        role: 'admin',
-      })
-  }
+    if (!profile) {
+      let churchId = ''
+      const { data: existingChurches } = await adminSupabase
+        .from('churches')
+        .select('id')
+        .limit(1)
+      
+      if (existingChurches && existingChurches.length > 0) {
+        churchId = existingChurches[0].id
+      } else {
+        const { data: newChurch, error: churchErr } = await adminSupabase
+          .from('churches')
+          .insert({ name: 'Default Church' })
+          .select('id')
+          .single()
+        if (churchErr) throw new Error(`Auto-Setup (church creation failed): ${churchErr.message}`)
+        if (newChurch) churchId = newChurch.id
+      }
 
-  if (profile && !profile.church_id) {
-    let churchId = ''
-    const { data: existingChurches } = await adminSupabase.from('churches').select('id').limit(1)
-    if (existingChurches && existingChurches.length > 0) {
-      churchId = existingChurches[0].id
-    } else {
-      const { data: newChurch } = await adminSupabase.from('churches').insert({ name: 'Default Church' }).select('id').single()
-      if (newChurch) churchId = newChurch.id
-    }
-    
-    if (churchId) {
-      const { data: updatedProfile } = await adminSupabase
+      if (!churchId) {
+        throw new Error('Auto-Setup (church ID could not be resolved)')
+      }
+
+      const displayName = user.email?.split('@')[0] || 'User'
+      const { data: newProfile, error: profileErr } = await adminSupabase
         .from('profiles')
-        .update({ church_id: churchId })
-        .eq('id', user.id)
+        .insert({
+          id: user.id,
+          church_id: churchId,
+          role: 'admin',
+          display_name: displayName,
+        })
         .select('id, church_id, role')
         .single()
-      if (updatedProfile) {
-        profile = updatedProfile
+
+      if (profileErr) throw new Error(`Auto-Setup (profile creation failed): ${profileErr.message}`)
+      if (newProfile) {
+        profile = newProfile
+      } else {
+        throw new Error('Auto-Setup (profile creation returned empty data)')
+      }
+
+      const { error: memberErr } = await adminSupabase
+        .from('church_members')
+        .insert({
+          church_id: churchId,
+          user_id: user.id,
+          role: 'admin',
+        })
+      if (memberErr) throw new Error(`Auto-Setup (membership mapping failed): ${memberErr.message}`)
+    }
+
+    if (profile && !profile.church_id) {
+      let churchId = ''
+      const { data: existingChurches } = await adminSupabase.from('churches').select('id').limit(1)
+      if (existingChurches && existingChurches.length > 0) {
+        churchId = existingChurches[0].id
+      } else {
+        const { data: newChurch, error: churchErr } = await adminSupabase.from('churches').insert({ name: 'Default Church' }).select('id').single()
+        if (churchErr) throw new Error(`Auto-Setup (fallback church creation failed): ${churchErr.message}`)
+        if (newChurch) churchId = newChurch.id
+      }
+      
+      if (churchId) {
+        const { data: updatedProfile, error: updateErr } = await adminSupabase
+          .from('profiles')
+          .update({ church_id: churchId })
+          .eq('id', user.id)
+          .select('id, church_id, role')
+          .single()
+        if (updateErr) throw new Error(`Auto-Setup (profile update failed): ${updateErr.message}`)
+        if (updatedProfile) {
+          profile = updatedProfile
+        }
       }
     }
-  }
 
-  if (!disableAuth && profile.role !== 'admin') return null
-  return profile
+    if (!disableAuth && profile.role !== 'admin') {
+      return { profile: null, reason: `User role is not admin (actual role: ${profile.role})` }
+    }
+
+    return { profile, reason: null }
+
+  } catch (err) {
+    const error = err as Error
+    return { profile: null, reason: error.message || 'Database exception during admin validation' }
+  }
 }
 
 // POST: 韓国語歌詞 → OpenAIでカナルビ生成 → song_materials に保存
@@ -101,8 +115,14 @@ export async function POST(
 ) {
   const { songId } = await params
   const supabase = await createClient()
-  const profile = await requireAdmin(supabase)
-  if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const check = await requireAdmin(supabase)
+  if (!check.profile) {
+    return NextResponse.json({
+      error: 'Forbidden',
+      reason: check.reason
+    }, { status: 403 })
+  }
+  const profile = check.profile
 
   const body = await request.json()
   const { korean_lyrics } = body
@@ -151,8 +171,14 @@ export async function PUT(
 ) {
   const { songId } = await params
   const supabase = await createClient()
-  const profile = await requireAdmin(supabase)
-  if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const check = await requireAdmin(supabase)
+  if (!check.profile) {
+    return NextResponse.json({
+      error: 'Forbidden',
+      reason: check.reason
+    }, { status: 403 })
+  }
+  const profile = check.profile
 
   const body = await request.json()
   const { sections } = body

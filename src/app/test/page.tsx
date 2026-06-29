@@ -114,6 +114,32 @@ export default function TestPage() {
     }
   }, [])
 
+  // 初期セットアップ用のステートと関数
+  const [settingUp, setSettingUp] = useState(false)
+  const [setupLogs, setSetupLogs] = useState<string[]>([])
+  const [setupError, setSetupError] = useState('')
+
+  async function runInitialSetup() {
+    setSettingUp(true)
+    setSetupError('')
+    setSetupLogs([])
+    try {
+      const res = await fetch('/api/setup/initial', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) {
+        setSetupLogs(data.logs || ['初期セットアップが完了しました'])
+        window.location.reload()
+      } else {
+        setSetupError(data.reason || '初期セットアップに失敗しました')
+        if (data.logs) setSetupLogs(data.logs)
+      }
+    } catch (e) {
+      setSetupError(String(e))
+    } finally {
+      setSettingUp(false)
+    }
+  }
+
   async function runDiagnostics() {
     setDiagnoseGet('実行中…')
     setDiagnosePost('実行中…')
@@ -295,8 +321,15 @@ export default function TestPage() {
           ) : (
             <div className="space-y-3 text-xs font-mono">
               {!testProfile && (
-                <div className="bg-yellow-950/30 border border-yellow-900/50 rounded-lg p-2.5 text-yellow-400 font-sans leading-relaxed">
-                  ⚠️ <strong>プロファイル未検出</strong>: profiles レコードが存在しません。新規曲登録や管理者APIへの最初のリクエスト時に自動作成されます。
+                <div className="bg-yellow-950/30 border border-yellow-900/50 rounded-lg p-2.5 text-yellow-400 font-sans leading-relaxed space-y-2 text-left">
+                  <p>⚠️ <strong>プロファイル未検出</strong>: profiles レコードが存在しません。新規曲登録や管理者APIへの最初のリクエスト時に自動作成されます。</p>
+                  <button
+                    onClick={runInitialSetup}
+                    disabled={settingUp}
+                    className="bg-yellow-600 hover:bg-yellow-500 disabled:opacity-50 text-white text-[11px] px-2.5 py-1 rounded transition-colors font-medium cursor-pointer font-sans"
+                  >
+                    {settingUp ? 'セットアップ実行中…' : '今すぐ初期セットアップを実行する'}
+                  </button>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-y-1 gap-x-4">
@@ -333,6 +366,27 @@ export default function TestPage() {
                 
                 <div className="text-gray-500">App Version:</div>
                 <div className="text-gray-400">v0.1.1</div>
+              </div>
+
+              <div className="mt-3.5 pt-3.5 border-t border-gray-800 space-y-2 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">初期セットアップ（手動実行）</span>
+                  <button
+                    onClick={runInitialSetup}
+                    disabled={settingUp}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs px-3 py-1.5 rounded-lg transition-colors font-medium cursor-pointer font-sans"
+                  >
+                    {settingUp ? 'セットアップ実行中…' : '初期セットアップを実行'}
+                  </button>
+                </div>
+                {setupError && (
+                  <p className="text-red-400 text-xs font-sans">エラー: {setupError}</p>
+                )}
+                {setupLogs.length > 0 && (
+                  <pre className="text-gray-400 text-[10px] bg-gray-950 rounded p-2 font-mono max-h-40 overflow-y-auto leading-tight">
+                    {setupLogs.join('\n')}
+                  </pre>
+                )}
               </div>
             </div>
           )}
