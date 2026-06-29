@@ -1,5 +1,5 @@
 const CACHE_NAME = 'sanbi-v1'
-const STATIC_ASSETS = ['/', '/search']
+const STATIC_ASSETS = ['/']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
