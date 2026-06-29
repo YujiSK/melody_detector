@@ -13,7 +13,7 @@ async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) 
   return profile
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   const supabase = await createClient()
   const profile = await requireAdmin(supabase)
   if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

@@ -9,7 +9,7 @@ import type { Song } from '@/types'
 function SongItem({ song }: { song: Song }) {
   return (
     <Link
-      href={`/song/${song.id}`}
+      href={`/songs/${song.id}`}
       className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
     >
       <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center shrink-0">
@@ -52,9 +52,7 @@ export default function SearchPage() {
     return () => clearTimeout(t)
   }, [query, search])
 
-  useEffect(() => {
-    search('')
-  }, [search])
+
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-950">

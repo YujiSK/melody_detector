@@ -36,7 +36,7 @@ export function useAudioRecorder() {
           mediaRecorder.stop()
         }, durationMs)
 
-        mediaRecorder.onerror = (e) => {
+        mediaRecorder.onerror = () => {
           stream.getTracks().forEach(t => t.stop())
           setState('idle')
           reject(new Error('Recording failed'))
