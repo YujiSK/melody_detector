@@ -27,6 +27,9 @@ interface RecognizeResult {
   debug?: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error_detail?: any
+  supabase_matched?: boolean
+  supabase_skipped?: boolean
+  skipped_reason?: string
 }
 
 function StatusBadge({ status }: { status: Status }) {
@@ -381,6 +384,15 @@ export default function TestPage() {
                     <div>ACR Status Msg: <span className="text-white font-bold">{recognize.acrcloud_raw?.status?.msg ?? 'N/A'}</span></div>
                     <div>ACR Version: <span className="text-white">{recognize.acrcloud_raw?.status?.version ?? 'N/A'}</span></div>
                     <div>metadata.music: <span className={recognize.acrcloud_raw?.metadata?.music ? "text-green-400 font-bold" : "text-red-400 font-bold"}>{recognize.acrcloud_raw?.metadata?.music ? 'YES' : 'NO'}</span></div>
+                    
+                    {/* プロファイルおよびSupabase照合ステータス */}
+                    <div>Profile Status: <span className={recognize.supabase_skipped ? "text-yellow-400 font-semibold" : "text-green-400 font-semibold"}>{recognize.supabase_skipped ? 'Not Found' : 'OK'}</span></div>
+                    <div>Supabase Matched: <span className="text-white font-bold">{recognize.supabase_matched ? 'YES' : 'NO'}</span></div>
+                    <div>Supabase Skipped: <span className="text-white font-bold">{recognize.supabase_skipped ? 'YES' : 'NO'}</span></div>
+                    {recognize.supabase_skipped && (
+                      <div className="col-span-2 text-yellow-400 font-semibold">Skipped Reason: <span className="text-white font-normal">{recognize.skipped_reason ?? 'N/A'}</span></div>
+                    )}
+
                     <div>Received File Size: <span className="text-white">{recognize.debug?.received_file_size ? `${(recognize.debug.received_file_size / 1024).toFixed(1)} KB` : 'N/A'}</span></div>
                     <div>Received File Type: <span className="text-white">{recognize.debug?.received_file_type ?? 'N/A'}</span></div>
                     <div>FormData Keys: <span className="text-white">{recognize.debug?.form_data_keys?.join(', ') ?? 'N/A'}</span></div>
