@@ -21,21 +21,17 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('church_id')
-      .eq('id', user.id)
-      .single()
-    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-
     const formData = await request.formData()
     debugInfo.form_data_keys = Array.from(formData.keys())
 
     const audioFile = formData.get('audio') as Blob
+
+    // If no audio file is provided (e.g. empty diagnostic post check), return alive check response
     if (!audioFile) {
       return NextResponse.json({
-        recognized: false,
-        message: 'No audio file received in FormData',
+        ok: true,
+        message: "recognize api alive",
+        method: "POST",
         debug: debugInfo
       })
     }
@@ -48,6 +44,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer)
     debugInfo.sample_bytes = buffer.byteLength
 
+    // Step 1: Run ACRCloud audio recognition first
     let result: ACRResult
     try {
       result = await recognizeAudio(buffer, audioFile.type, debugInfo)
@@ -65,7 +62,32 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Step 2: Fetch user profile (church_id) from Supabase
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('church_id')
+      .eq('id', user.id)
+      .single()
+
+    const hasProfile = !!profile
     const acrMatch = result.metadata?.music?.[0]
+
+    // Step 3: If user profile is missing, skip Supabase matching but return ACRCloud raw results
+    if (!hasProfile) {
+      return NextResponse.json({
+        recognized: result.status.code === 0 && !!acrMatch,
+        registered: false,
+        supabase_matched: false,
+        supabase_skipped: true,
+        skipped_reason: 'Profile (church_id) not found for current user',
+        title: acrMatch?.title ?? null,
+        artist: acrMatch?.artists?.[0]?.name ?? null,
+        acrcloud_raw: result,
+        debug: debugInfo
+      })
+    }
+
+    // Step 4: Profile exists, record logs
     await supabase.from('recognition_logs').insert({
       user_id: user.id,
       church_id: profile.church_id,
@@ -85,6 +107,7 @@ export async function POST(request: NextRequest) {
 
     const acrId = acrMatch.acrid
 
+    // Step 5: Match against church registered songs
     const { data: song } = await supabase
       .from('songs')
       .select('id, title, title_ja, status')
@@ -96,6 +119,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         recognized: true,
         registered: false,
+        supabase_matched: false,
         acrcloud_music_id: acrId,
         title: acrMatch.title,
         artist: acrMatch.artists?.[0]?.name ?? null,
@@ -104,6 +128,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Update matched logs
     await supabase.from('recognition_logs')
       .update({ matched_song_id: song.id })
       .eq('user_id', user.id)
@@ -111,6 +136,7 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(1)
 
+    // Log viewing activity
     await supabase.from('user_song_activity').upsert({
       user_id: user.id,
       song_id: song.id,
@@ -124,6 +150,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       recognized: true,
       registered: true,
+      supabase_matched: true,
       song_id: song.id,
       title: song.title,
       title_ja: song.title_ja,
