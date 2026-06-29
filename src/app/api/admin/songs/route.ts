@@ -109,17 +109,30 @@ export async function GET() {
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
     .from('songs')
-    .select('*, song_materials(id, sections)')
+    .select('*, song_materials(id, kanarubi_document)')
     .eq('church_id', churchId)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function parseJsonSafe(val: any) {
+    if (typeof val === 'string') {
+      try {
+        return JSON.parse(val)
+      } catch {
+        return []
+      }
+    }
+    return val || []
+  }
+
   // フロントエンド側で song.title / status を参照している箇所への後方互換マッピング
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const formattedSongs = (data || []).map((song: any) => {
     const materials = song.song_materials || []
-    const hasMaterial = materials.length > 0 && Array.isArray(materials[0].sections) && materials[0].sections.length > 0
+    const sections = materials.length > 0 ? parseJsonSafe(materials[0].kanarubi_document) : []
+    const hasMaterial = Array.isArray(sections) && sections.length > 0
     return {
       ...song,
       title: song.title_ko,
