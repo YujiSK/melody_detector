@@ -89,7 +89,7 @@ export default function AdminSongPage() {
           <div className="flex items-center justify-between">
             <label className="text-white font-medium text-sm">韓国語歌詞</label>
             {material && (
-              <Link href={`/song/${id}`} className="text-blue-400 text-xs hover:text-blue-300">
+              <Link href={`/songs/${id}`} className="text-blue-400 text-xs hover:text-blue-300">
                 カナルビを見る →
               </Link>
             )}

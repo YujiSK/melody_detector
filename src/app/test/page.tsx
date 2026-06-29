@@ -277,7 +277,7 @@ export default function TestPage() {
                   <p className="text-white mt-1">{recognize.title}</p>
                   {recognize.title_ja && <p className="text-gray-400 text-xs">{recognize.title_ja}</p>}
                   <a
-                    href={`/song/${recognize.song_id}`}
+                    href={`/songs/${recognize.song_id}`}
                     className="inline-block mt-2 text-blue-400 text-xs underline"
                   >
                     カナルビを見る →

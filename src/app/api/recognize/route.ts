@@ -88,3 +88,10 @@ export async function POST(request: NextRequest) {
     status: song.status,
   })
 }
+
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    message: 'recognize api alive',
+  })
+}
