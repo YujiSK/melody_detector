@@ -13,14 +13,28 @@ export default function AdminSongPage() {
   const [koreanLyrics, setKoreanLyrics] = useState('')
   const [generating, setGenerating] = useState(false)
   const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     fetch(`/api/songs/${id}`)
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          const errData = await r.json().catch(() => ({}))
+          throw new Error(errData.error || `HTTP ${r.status}`)
+        }
+        return r.json()
+      })
       .then(d => {
         setSong(d.song)
         setMaterial(d.material)
         if (d.material?.raw_korean) setKoreanLyrics(d.material.raw_korean)
+      })
+      .catch(e => {
+        setError(e.message || String(e))
+      })
+      .finally(() => {
+        setLoading(false)
       })
   }, [id])
 
@@ -47,9 +61,18 @@ export default function AdminSongPage() {
     router.push('/admin')
   }
 
-  if (!song) return (
+  if (loading) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  if (error || !song) return (
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 space-y-4 text-center">
+      <p className="text-red-400 font-semibold text-sm">エラー: {error || '曲データを取得できませんでした'}</p>
+      <Link href="/admin" className="text-blue-400 text-xs hover:underline">
+        管理画面一覧へ戻る
+      </Link>
     </div>
   )
 
