@@ -19,10 +19,12 @@ export interface Song {
   id: string
   church_id: string
   title: string
+  title_ko?: string | null
   title_ja: string | null
   artist: string | null
   acrcloud_music_id: string | null
-  status: 'pending' | 'ready'
+  is_active?: boolean
+  status?: 'pending' | 'ready'
   created_at: string
   updated_at: string
 }

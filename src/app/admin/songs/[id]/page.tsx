@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { Song, SongMaterial } from '@/types'
+import LyricSearchHelper from '@/components/LyricSearchHelper'
 
 export default function AdminSongPage() {
   const { id } = useParams<{ id: string }>()
@@ -117,6 +118,7 @@ export default function AdminSongPage() {
               </Link>
             )}
           </div>
+          <LyricSearchHelper title={song.title_ko || song.title} artist={song.artist} />
           <textarea
             value={koreanLyrics}
             onChange={e => setKoreanLyrics(e.target.value)}

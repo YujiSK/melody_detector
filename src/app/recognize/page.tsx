@@ -6,6 +6,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { cache } from '@/lib/indexeddb'
 import WaveAnimation from '@/components/WaveAnimation'
 import BottomNav from '@/components/layout/BottomNav'
+import LyricSearchHelper from '@/components/LyricSearchHelper'
 
 type RecognizeResult =
   | { recognized: false; message: string; acrcloud_raw?: unknown }
@@ -233,6 +234,11 @@ export default function RecognizePage() {
                   </p>
                 )}
               </div>
+            )}
+
+            {/* 歌詞検索補助リンク */}
+            {music && (
+              <LyricSearchHelper title={title} artist={artists} />
             )}
 
             {registerError && (
