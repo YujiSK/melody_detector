@@ -48,5 +48,12 @@ export async function GET(
     view_count: 1,
   }, { onConflict: 'user_id,song_id', ignoreDuplicates: false })
 
-  return NextResponse.json({ song: formattedSong, material })
+  const hasMaterial = !!(material && material.sections && material.sections.length > 0)
+  return NextResponse.json({
+    song: formattedSong,
+    material,
+    hasMaterial,
+    isReady: hasMaterial,
+    materialId: material?.id || null
+  })
 }

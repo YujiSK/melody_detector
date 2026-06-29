@@ -56,7 +56,6 @@ export default function AdminSongPage() {
         return
       }
       setMaterial(data.material)
-      setSong(s => s ? { ...s, status: 'ready' } : s)
       setMessage('カナルビを生成しました')
 
       // プレビュー表示位置までスムーススクロール
@@ -120,8 +119,8 @@ export default function AdminSongPage() {
             <p className="text-gray-600 text-xs font-mono mt-1">ACR: {song.acrcloud_music_id.slice(0, 16)}…</p>
           )}
           <span className={`inline-block text-xs px-2 py-0.5 rounded-full mt-1
-            ${material ? 'bg-green-900/50 text-green-400' : 'bg-yellow-900/50 text-yellow-400'}`}>
-            {material ? '公開中' : '準備中'}
+            ${material && material.sections && material.sections.length > 0 ? 'bg-green-900/50 text-green-400' : 'bg-yellow-900/50 text-yellow-400'}`}>
+            {material && material.sections && material.sections.length > 0 ? '公開中' : '準備中'}
           </span>
         </div>
 

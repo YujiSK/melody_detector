@@ -2,6 +2,20 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
+interface SongMaterialStub {
+  id: string
+  sections: unknown[] | null
+}
+
+interface SongWithMaterials {
+  id: string
+  title_ko: string | null
+  title_ja: string | null
+  artist: string | null
+  created_at: string
+  song_materials?: SongMaterialStub[]
+}
+
 export default async function AdminSongsListPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -16,11 +30,14 @@ export default async function AdminSongsListPage() {
   const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true'
   if (!profile || (!disableAuth && profile.role !== 'admin')) redirect('/')
 
-  const { data: songs } = await supabase
+  // song_materials の sections 存在有無を JOIN して取得
+  const { data: songsRaw } = await supabase
     .from('songs')
-    .select('id, title, title_ja, artist, status, created_at')
+    .select('id, title_ko, title_ja, artist, created_at, song_materials(id, sections)')
     .eq('church_id', profile.church_id)
     .order('created_at', { ascending: false })
+
+  const songs = (songsRaw || []) as unknown as SongWithMaterials[]
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -43,30 +60,36 @@ export default async function AdminSongsListPage() {
 
       <main className="px-4 py-4 max-w-2xl mx-auto">
         <div className="space-y-2">
-          {!songs?.length && (
+          {!songs.length && (
             <p className="text-gray-500 text-sm text-center py-8">曲がまだ登録されていません</p>
           )}
-          {songs?.map(song => (
-            <Link
-              key={song.id}
-              href={`/admin/songs/${song.id}`}
-              className="flex items-center gap-3 bg-gray-900 rounded-xl px-4 py-3 hover:bg-gray-800 transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-medium truncate">{song.title}</p>
-                {song.title_ja && <p className="text-gray-400 text-xs truncate">{song.title_ja}</p>}
-                {song.artist && <p className="text-gray-500 text-xs truncate">{song.artist}</p>}
-              </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full shrink-0
-                ${song.status === 'ready'
-                  ? 'bg-green-900/50 text-green-400'
-                  : 'bg-yellow-900/50 text-yellow-400'
-                }`}
+          {songs.map(song => {
+            const materials = song.song_materials || []
+            const hasMaterial = materials.length > 0 && Array.isArray(materials[0].sections) && materials[0].sections.length > 0
+            const displayTitle = song.title_ko || 'No Title'
+
+            return (
+              <Link
+                key={song.id}
+                href={`/admin/songs/${song.id}`}
+                className="flex items-center gap-3 bg-gray-900 rounded-xl px-4 py-3 hover:bg-gray-800 transition-colors"
               >
-                {song.status === 'ready' ? '公開中' : '準備中'}
-              </span>
-            </Link>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{displayTitle}</p>
+                  {song.title_ja && <p className="text-gray-400 text-xs truncate">{song.title_ja}</p>}
+                  {song.artist && <p className="text-gray-500 text-xs truncate">{song.artist}</p>}
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full shrink-0
+                  ${hasMaterial
+                    ? 'bg-green-900/50 text-green-400'
+                    : 'bg-yellow-900/50 text-yellow-400'
+                  }`}
+                >
+                  {hasMaterial ? '公開中' : '準備中'}
+                </span>
+              </Link>
+            )
+          })}
         </div>
       </main>
     </div>
