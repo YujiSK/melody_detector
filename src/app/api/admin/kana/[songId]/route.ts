@@ -143,11 +143,7 @@ export async function POST(
     material = data
   }
 
-  await adminSupabase
-    .from('songs')
-    .update({ status: 'ready' })
-    .eq('id', songId)
-    .eq('church_id', churchId)
+  // songs テーブルに status カラムは存在しないため、アップデート処理を安全に削除します
 
   return NextResponse.json({ material })
 }

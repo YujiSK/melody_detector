@@ -111,19 +111,31 @@ export async function PATCH(
   const churchId = check.churchId
 
   const body = await request.json()
-  const { title, title_ja, artist, acrcloud_music_id, status } = body
+  const { title, title_ja, artist, acrcloud_music_id, is_active } = body
 
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
     .from('songs')
-    .update({ title, title_ja, artist, acrcloud_music_id, status })
+    .update({
+      title_ko: title,
+      title_ja,
+      artist,
+      acrcloud_music_id,
+      is_active
+    })
     .eq('id', id)
     .eq('church_id', churchId)
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ song: data })
+
+  const formattedSong = {
+    ...data,
+    title: data.title_ko
+  }
+
+  return NextResponse.json({ song: formattedSong })
 }
 
 export async function DELETE(

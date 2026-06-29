@@ -114,7 +114,15 @@ export async function GET() {
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ songs: data })
+
+  // フロントエンド側で song.title を参照している箇所への後方互換エイリアス
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formattedSongs = (data || []).map((song: any) => ({
+    ...song,
+    title: song.title_ko
+  }))
+
+  return NextResponse.json({ songs: formattedSongs })
 }
 
 export async function POST(request: NextRequest) {
@@ -127,6 +135,7 @@ export async function POST(request: NextRequest) {
     }, { status: 403 })
   }
   const churchId = check.churchId
+  const profile = check.profile
 
   const body = await request.json()
   const { title, title_ja, artist, acrcloud_music_id } = body
@@ -135,10 +144,24 @@ export async function POST(request: NextRequest) {
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
     .from('songs')
-    .insert({ church_id: churchId, title, title_ja, artist, acrcloud_music_id, status: 'pending' })
+    .insert({
+      church_id: churchId,
+      title_ko: title,
+      title_ja,
+      artist,
+      acrcloud_music_id,
+      is_active: true,
+      created_by: profile.id
+    })
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ song: data }, { status: 201 })
+
+  const formattedSong = {
+    ...data,
+    title: data.title_ko
+  }
+
+  return NextResponse.json({ song: formattedSong }, { status: 201 })
 }
