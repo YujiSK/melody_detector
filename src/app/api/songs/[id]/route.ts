@@ -10,20 +10,29 @@ export async function GET(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase
-    .from('profiles')
+  // church_members から所属教会を取得する（profilesにはchurch_idが存在しない）
+  const { data: member } = await supabase
+    .from('church_members')
     .select('church_id')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single()
-  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    
+  if (!member) return NextResponse.json({ error: 'Membership not found' }, { status: 404 })
 
   const { data: song } = await supabase
     .from('songs')
     .select('*')
     .eq('id', id)
-    .eq('church_id', profile.church_id)
+    .eq('church_id', member.church_id)
     .single()
+    
   if (!song) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // フロントエンド互換のエイリアス title を付加
+  const formattedSong = {
+    ...song,
+    title: song.title_ko
+  }
 
   const { data: material } = await supabase
     .from('song_materials')
@@ -39,5 +48,5 @@ export async function GET(
     view_count: 1,
   }, { onConflict: 'user_id,song_id', ignoreDuplicates: false })
 
-  return NextResponse.json({ song, material })
+  return NextResponse.json({ song: formattedSong, material })
 }
