@@ -110,7 +110,6 @@ export async function POST(
       reason: check.reason
     }, { status: 403 })
   }
-  const churchId = check.churchId
 
   const body = await request.json()
   const { korean_lyrics } = body
@@ -119,33 +118,54 @@ export async function POST(
   const sections = await generateKana(korean_lyrics)
 
   const adminSupabase = await createAdminClient()
-  const { data: existing } = await adminSupabase
+  const { data: existing, error: findError } = await adminSupabase
     .from('song_materials')
     .select('id')
     .eq('song_id', songId)
-    .single()
+    .maybeSingle()
+
+  if (findError) {
+    throw new Error(`Failed to check existing song material: ${findError.message}`)
+  }
 
   let material
   if (existing) {
-    const { data } = await adminSupabase
+    const { data, error: updateError } = await adminSupabase
       .from('song_materials')
-      .update({ sections, raw_korean: korean_lyrics })
+      .update({
+        kanarubi_document: sections,
+        source_lyrics: korean_lyrics
+      })
       .eq('id', existing.id)
       .select()
       .single()
+    if (updateError) {
+      throw new Error(`Failed to update song material: ${updateError.message}`)
+    }
     material = data
   } else {
-    const { data } = await adminSupabase
+    const { data, error: insertError } = await adminSupabase
       .from('song_materials')
-      .insert({ song_id: songId, church_id: churchId, sections, raw_korean: korean_lyrics })
+      .insert({
+        song_id: songId,
+        kanarubi_document: sections,
+        source_lyrics: korean_lyrics
+      })
       .select()
       .single()
+    if (insertError) {
+      throw new Error(`Failed to insert song material: ${insertError.message}`)
+    }
     material = data
   }
 
-  // songs テーブルに status カラムは存在しないため、アップデート処理を安全に削除します
+  const formattedMaterial = material ? {
+    ...material,
+    sections: material.kanarubi_document,
+    raw_korean: material.source_lyrics
+  } : null
 
-  return NextResponse.json({ material })
+  return NextResponse.json({ material: formattedMaterial })
 }
 
 // PUT: カナルビを手動編集
@@ -162,20 +182,24 @@ export async function PUT(
       reason: check.reason
     }, { status: 403 })
   }
-  const churchId = check.churchId
-
   const body = await request.json()
   const { sections } = body
 
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
     .from('song_materials')
-    .update({ sections })
+    .update({ kanarubi_document: sections })
     .eq('song_id', songId)
-    .eq('church_id', churchId)
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ material: data })
+
+  const formattedMaterial = data ? {
+    ...data,
+    sections: data.kanarubi_document,
+    raw_korean: data.source_lyrics
+  } : null
+
+  return NextResponse.json({ material: formattedMaterial })
 }
