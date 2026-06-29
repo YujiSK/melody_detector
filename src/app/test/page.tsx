@@ -21,6 +21,8 @@ interface RecognizeResult {
   artist?: string
   acr_status_code?: number
   acr_status_msg?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  acrcloud_raw?: any
 }
 
 function StatusBadge({ status }: { status: Status }) {
@@ -348,6 +350,36 @@ export default function TestPage() {
                     カナルビを見る →
                   </a>
                 </>
+              )}
+              {/* ACRCloud 生レスポンスとデバッグ情報 */}
+              {recognize.acrcloud_raw && (
+                <div className="mt-4 pt-4 border-t border-gray-800 space-y-2 text-xs text-left">
+                  <p className="text-gray-400 font-semibold">ACRCloud デバッグ診断情報:</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-[11px] text-gray-400">
+                    <div>HTTP Status: <span className="text-white">{recognize.acrcloud_raw.debug?.http_status ?? 'N/A'}</span></div>
+                    <div>ACR Status Code: <span className="text-white">{recognize.acrcloud_raw.status?.code ?? 'N/A'}</span></div>
+                    <div>ACR Status Msg: <span className="text-white">{recognize.acrcloud_raw.status?.msg ?? 'N/A'}</span></div>
+                    <div>ACR Version: <span className="text-white">{recognize.acrcloud_raw.status?.version ?? 'N/A'}</span></div>
+                    <div>metadata.music: <span className={recognize.acrcloud_raw.metadata?.music ? "text-green-400 font-bold" : "text-red-400 font-bold"}>{recognize.acrcloud_raw.metadata?.music ? 'YES' : 'NO'}</span></div>
+                    <div>File Name: <span className="text-white">{recognize.acrcloud_raw.debug?.file_name ?? 'N/A'}</span></div>
+                    <div>File Size: <span className="text-white">{recognize.acrcloud_raw.debug?.file_size ? `${(recognize.acrcloud_raw.debug.file_size / 1024).toFixed(1)} KB` : 'N/A'}</span></div>
+                    <div>Mime Type: <span className="text-white">{recognize.acrcloud_raw.debug?.mime_type ?? 'N/A'}</span></div>
+                    <div>sample_bytes: <span className="text-white">{recognize.acrcloud_raw.debug?.file_size ?? 'N/A'}</span></div>
+                    <div>timestamp: <span className="text-white">{recognize.acrcloud_raw.debug?.timestamp ?? 'N/A'}</span></div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-gray-500 block font-mono text-[10px]">string_to_sign (access_secret excluded):</span>
+                    <pre className="text-gray-300 bg-gray-950 rounded p-1.5 font-mono text-[10px] whitespace-pre overflow-x-auto leading-tight">
+                      {recognize.acrcloud_raw.debug?.string_to_sign || 'N/A'}
+                    </pre>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-gray-500 block font-mono text-[10px]">Raw JSON Response:</span>
+                    <pre className="text-gray-300 bg-gray-950 rounded p-2 overflow-auto font-mono text-[10px] max-h-60 leading-tight">
+                      {JSON.stringify(recognize.acrcloud_raw, null, 2)}
+                    </pre>
+                  </div>
+                </div>
               )}
             </div>
           )}

@@ -14,7 +14,16 @@ export function useAudioRecorder() {
     setError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream)
+      const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
+      let selectedMime = ''
+      for (const mime of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mime)) {
+          selectedMime = mime
+          break
+        }
+      }
+      const options = selectedMime ? { mimeType: selectedMime } : undefined
+      const mediaRecorder = new MediaRecorder(stream, options)
       mediaRecorderRef.current = mediaRecorder
       chunksRef.current = []
 
