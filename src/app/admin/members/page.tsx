@@ -13,7 +13,8 @@ export default async function AdminMembersPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'admin') redirect('/')
+  const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true'
+  if (!profile || (!disableAuth && profile.role !== 'admin')) redirect('/')
 
   // profiles テーブルから同じ教会（church_id）に属するユーザーを取得
   const { data: members } = await supabase

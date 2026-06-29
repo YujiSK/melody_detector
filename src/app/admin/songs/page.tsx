@@ -13,7 +13,8 @@ export default async function AdminSongsListPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'admin') redirect('/')
+  const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true'
+  if (!profile || (!disableAuth && profile.role !== 'admin')) redirect('/')
 
   const { data: songs } = await supabase
     .from('songs')
