@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+function parseSections(val: any) {
+  if (!val) return []
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val)
+    } catch (e) {
+      console.error('Failed to parse sections:', e)
+      return []
+    }
+  }
+  return val
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -42,7 +55,7 @@ export async function GET(
 
   const formattedMaterial = material ? {
     ...material,
-    sections: material.kanarubi_document,
+    sections: parseSections(material.kanarubi_document),
     raw_korean: material.source_lyrics
   } : null
 
