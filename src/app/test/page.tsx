@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 
 type Status = 'idle' | 'ok' | 'error'
@@ -46,6 +46,39 @@ export default function TestPage() {
   const { state: recState, error: recError, start, reset } = useAudioRecorder()
 
   const [supabase, setSupabase] = useState<CheckResult | null>(null)
+  const [clientOrigin, setClientOrigin] = useState('')
+  const [diagnoseGet, setDiagnoseGet] = useState<string>('')
+  const [diagnosePost, setDiagnosePost] = useState<string>('')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin
+      Promise.resolve().then(() => {
+        setClientOrigin(origin)
+      })
+    }
+  }, [])
+
+  async function runDiagnostics() {
+    setDiagnoseGet('実行中…')
+    setDiagnosePost('実行中…')
+
+    try {
+      const getRes = await fetch('/api/recognize', { method: 'GET' })
+      const getText = await getRes.text()
+      setDiagnoseGet(`Status: ${getRes.status}\nBody: ${getText}`)
+    } catch (e) {
+      setDiagnoseGet(`Error: ${String(e)}`)
+    }
+
+    try {
+      const postRes = await fetch('/api/recognize', { method: 'POST' })
+      const postText = await postRes.text()
+      setDiagnosePost(`Status: ${postRes.status}\nBody: ${postText}`)
+    } catch (e) {
+      setDiagnosePost(`Error: ${String(e)}`)
+    }
+  }
   const [openai, setOpenai] = useState<CheckResult | null>(null)
   const [acrCheck, setAcrCheck] = useState<CheckResult | null>(null)
   const [recognize, setRecognize] = useState<RecognizeResult | null>(null)
@@ -157,6 +190,38 @@ export default function TestPage() {
       </header>
 
       <div className="px-4 py-4 space-y-4 max-w-xl">
+
+        {/* ホスト・デプロイ診断 */}
+        <Section title="Vercelホスト・API疎通診断">
+          <div className="space-y-2 text-xs">
+            <p className="text-gray-400">
+              <span className="font-semibold text-white">location.origin:</span> {clientOrigin || '取得中…'}
+            </p>
+            <p className="text-gray-400">
+              <span className="font-semibold text-white">fetch target URL:</span> {clientOrigin ? `${clientOrigin}/api/recognize` : '取得中…'}
+            </p>
+            <button
+              onClick={runDiagnostics}
+              className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg transition-colors font-medium"
+            >
+              診断APIを実行
+            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+              <div>
+                <span className="text-gray-500 block mb-1">GET /api/recognize</span>
+                <pre className="text-gray-300 bg-gray-950 rounded p-2 overflow-x-auto whitespace-pre-wrap font-mono leading-tight max-h-32">
+                  {diagnoseGet || '未実行'}
+                </pre>
+              </div>
+              <div>
+                <span className="text-gray-500 block mb-1">POST /api/recognize (空)</span>
+                <pre className="text-gray-300 bg-gray-950 rounded p-2 overflow-x-auto whitespace-pre-wrap font-mono leading-tight max-h-32">
+                  {diagnosePost || '未実行'}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </Section>
 
         {/* Supabase */}
         <Section title="Supabase">
