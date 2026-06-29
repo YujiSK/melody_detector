@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { generateKana } from '@/lib/openai'
 
+function parseSections(val: any) {
+  if (!val) return []
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val)
+    } catch (e) {
+      console.error('Failed to parse sections:', e)
+      return []
+    }
+  }
+  return val
+}
+
 async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -159,21 +172,9 @@ export async function POST(
     material = data
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function parseJsonSafe(val: any) {
-    if (typeof val === 'string') {
-      try {
-        return JSON.parse(val)
-      } catch {
-        return []
-      }
-    }
-    return val || []
-  }
-
   const formattedMaterial = material ? {
     ...material,
-    sections: parseJsonSafe(material.kanarubi_document),
+    sections: parseSections(material.kanarubi_document),
     raw_korean: material.source_lyrics
   } : null
 
@@ -207,21 +208,9 @@ export async function PUT(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function parseJsonSafe(val: any) {
-    if (typeof val === 'string') {
-      try {
-        return JSON.parse(val)
-      } catch {
-        return []
-      }
-    }
-    return val || []
-  }
-
   const formattedMaterial = data ? {
     ...data,
-    sections: parseJsonSafe(data.kanarubi_document),
+    sections: parseSections(data.kanarubi_document),
     raw_korean: data.source_lyrics
   } : null
 
