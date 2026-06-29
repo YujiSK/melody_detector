@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 
 export interface ACRResult {
-  status: { msg: string; code: number }
+  status: { msg: string; code: number; version?: string }
   metadata?: {
     music?: Array<{
       external_ids?: { isrc?: string }
@@ -9,6 +9,14 @@ export interface ACRResult {
       artists?: Array<{ name: string }>
       acrid: string
     }>
+  }
+  debug?: {
+    timestamp: string
+    string_to_sign: string
+    file_name: string
+    file_size: number
+    mime_type: string
+    http_status: number
   }
 }
 
@@ -27,7 +35,7 @@ export async function recognizeAudio(audioBlob: Blob): Promise<ACRResult> {
   const signature = crypto.createHmac('sha1', secretKey).update(signStr).digest('base64')
 
   const formData = new FormData()
-  formData.append('sample', audioBlob, 'audio.webm')
+  formData.append('sample', audioBlob, 'sample.webm')
   formData.append('access_key', accessKey)
   formData.append('data_type', dataType)
   formData.append('signature_version', signatureVersion)
@@ -40,5 +48,15 @@ export async function recognizeAudio(audioBlob: Blob): Promise<ACRResult> {
     body: formData,
   })
 
-  return res.json()
+  const rawJson = await res.json()
+  rawJson.debug = {
+    timestamp,
+    string_to_sign: signStr,
+    file_name: 'sample.webm',
+    file_size: audioBlob.size,
+    mime_type: audioBlob.type,
+    http_status: res.status,
+  }
+
+  return rawJson as ACRResult
 }
