@@ -147,7 +147,8 @@ export default function TestPage() {
         setSetupLogs(data.logs || ['初期セットアップが完了しました'])
         window.location.reload()
       } else {
-        setSetupError(data.reason || '初期セットアップに失敗しました')
+        const dbgStr = data.debug ? ` [Debug: ${JSON.stringify(data.debug)}]` : ''
+        setSetupError((data.reason || '初期セットアップに失敗しました') + dbgStr)
         if (data.logs) setSetupLogs(data.logs)
       }
     } catch (e) {

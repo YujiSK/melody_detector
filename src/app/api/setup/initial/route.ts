@@ -164,7 +164,12 @@ export async function POST() {
       ok: false,
       error: 'Setup failed',
       reason: error.message,
-      logs: debugLogs
+      logs: debugLogs,
+      debug: {
+        hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        serviceRoleKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.length : 0,
+        envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE')),
+      }
     }, { status: 500 })
   }
 }
