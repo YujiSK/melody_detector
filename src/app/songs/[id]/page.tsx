@@ -114,8 +114,18 @@ export default function SongPage() {
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 px-4">
         <p className="text-white text-lg font-bold">{song.title_ko}</p>
+        {song.title_ja && <p className="text-gray-400 text-sm">{song.title_ja}</p>}
+        {song.artist && <p className="text-gray-500 text-xs">{song.artist}</p>}
         <p className="text-gray-400 text-sm">カナルビ資料はまだ登録されていません</p>
-        <button onClick={() => router.back()} className="text-blue-400 text-sm mt-2">戻る</button>
+        <div className="flex flex-col gap-2 items-center mt-2">
+          <a
+            href={`/admin/songs/${id}`}
+            className="text-blue-400 text-sm hover:text-blue-300 underline"
+          >
+            管理画面で編集する →
+          </a>
+          <button onClick={() => router.back()} className="text-gray-500 text-xs mt-1 cursor-pointer">戻る</button>
+        </div>
       </div>
     )
   }

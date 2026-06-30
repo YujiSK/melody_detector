@@ -108,7 +108,11 @@ export default function RecognizePage() {
 
       const resData = await res.json()
       if (!res.ok) {
-        setRegisterError(resData.error || '登録に失敗しました')
+        if (res.status === 401 || res.status === 403) {
+          setRegisterError('曲の登録には管理者ログインが必要です。ログイン後に再度お試しください。')
+        } else {
+          setRegisterError(resData.error || '登録に失敗しました')
+        }
         setRegistering(false)
         return
       }
