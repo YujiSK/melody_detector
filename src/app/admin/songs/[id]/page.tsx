@@ -6,6 +6,7 @@ import Link from 'next/link'
 import type { Song, SongMaterial, LyricSection, LyricLine } from '@/types'
 import { cache } from '@/lib/indexeddb'
 import LyricSearchHelper from '@/components/LyricSearchHelper'
+import LyricsOcrHelper from '@/components/admin/LyricsOcrHelper'
 
 // ハングル歌詞（source_lyrics）を改行分割して LyricLine.korean に安全にマッピングする関数
 function mapSourceLyricsToSections(sections: LyricSection[], sourceLyrics: string | null): LyricSection[] {
@@ -314,6 +315,13 @@ export default function AdminSongPage() {
           titleKo={song.title_ko}
           titleJa={song.title_ja}
           artist={song.artist}
+          textareaId="korean-lyrics-textarea"
+        />
+
+        {/* OCR補助 */}
+        <LyricsOcrHelper
+          currentLyrics={koreanLyrics}
+          onApply={setKoreanLyrics}
           textareaId="korean-lyrics-textarea"
         />
 
