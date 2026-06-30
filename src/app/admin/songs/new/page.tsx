@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 export default function NewSongPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ title: '', title_ja: '', artist: '', acrcloud_music_id: '' })
+  const [form, setForm] = useState({ title_ko: '', title_ja: '', artist: '', acrcloud_music_id: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -16,7 +16,7 @@ export default function NewSongPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.title) return
+    if (!form.title_ko) return
     setLoading(true)
     setError('')
 
@@ -48,8 +48,8 @@ export default function NewSongPage() {
           <label className="text-gray-400 text-xs mb-1 block">曲名（韓国語・英語）*</label>
           <input
             required
-            value={form.title}
-            onChange={e => update('title', e.target.value)}
+            value={form.title_ko}
+            onChange={e => update('title_ko', e.target.value)}
             className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="例: 주님의 영광"
           />
@@ -87,7 +87,7 @@ export default function NewSongPage() {
 
         <button
           type="submit"
-          disabled={loading || !form.title}
+          disabled={loading || !form.title_ko}
           className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-colors"
         >
           {loading ? '保存中…' : '保存して歌詞登録へ'}

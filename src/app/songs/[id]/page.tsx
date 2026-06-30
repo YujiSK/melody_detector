@@ -64,10 +64,11 @@ export default function SongPage() {
     )
   }
 
-  if (!material || !material.sections || material.sections.length === 0) {
+  const sections = material?.kanarubi_document?.sections ?? []
+  if (!material || sections.length === 0) {
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 px-4">
-        <p className="text-white text-lg font-bold">{song.title}</p>
+        <p className="text-white text-lg font-bold">{song.title_ko}</p>
         <p className="text-gray-400 text-sm">カナルビ資料はまだ登録されていません</p>
         <button onClick={() => router.back()} className="text-blue-400 text-sm mt-2">戻る</button>
       </div>
@@ -82,9 +83,9 @@ export default function SongPage() {
             <path d="M19 12H5M12 5l-7 7 7 7" />
           </svg>
         </button>
-        <span className="text-white font-medium text-sm truncate">{song.title}</span>
+        <span className="text-white font-medium text-sm truncate">{song.title_ko}</span>
       </header>
-      <KanaDisplay material={material} songTitle={song.title} songTitleJa={song.title_ja} />
+      <KanaDisplay material={material} songTitle={song.title_ko} songTitleJa={song.title_ja} />
     </div>
   )
 }

@@ -17,13 +17,13 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('songs')
-    .select('id, title, title_ja, artist, status, created_at')
+    .select('id, title_ko, title_ja, artist, is_active, created_at')
     .eq('church_id', profile.church_id)
-    .eq('status', 'ready')
-    .order('title')
+    .eq('is_active', true)
+    .order('title_ko')
 
   if (q) {
-    query = query.or(`title.ilike.%${q}%,title_ja.ilike.%${q}%,artist.ilike.%${q}%`)
+    query = query.or(`title_ko.ilike.%${q}%,title_ja.ilike.%${q}%,artist.ilike.%${q}%`)
   }
 
   const { data, error } = await query.limit(50)
