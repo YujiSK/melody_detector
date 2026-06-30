@@ -27,8 +27,8 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const publicPaths = ['/login', '/auth/callback', '/test', '/api']
-  if (!user && !publicPaths.some(p => pathname.startsWith(p))) {
+  const publicPrefixes = ['/login', '/auth/callback', '/test', '/api', '/songs', '/recognize']
+  if (!user && pathname !== '/' && !publicPrefixes.some(p => pathname.startsWith(p))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
