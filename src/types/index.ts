@@ -33,12 +33,14 @@ export interface LyricSection {
   type: 'Intro' | 'Verse' | 'Pre-Chorus' | 'Chorus' | 'Bridge' | 'Instrumental' | 'Ending' | 'Outro'
   label: string
   lines: LyricLine[]
+  order?: number
 }
 
 export interface LyricLine {
   kana: string
   translation: string | null
   is_english: boolean
+  korean?: string | null
 }
 
 export interface SongMaterial {
