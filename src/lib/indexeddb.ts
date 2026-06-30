@@ -2,7 +2,7 @@ import { openDB, type IDBPDatabase } from 'idb'
 import type { Song, SongMaterial, RecentSong, FavoriteSong } from '@/types'
 
 const DB_NAME = 'melody-detector'
-const DB_VERSION = 3
+const DB_VERSION = 4 // v4 にアップグレードして既存の v3 ユーザーにもストア作成を強制
 
 type DB = {
   songs: {
@@ -94,15 +94,38 @@ export const cache = {
   async getRecents(): Promise<RecentSong[]> {
     const db = await getDB()
     const all = await db.getAll('recents')
-    return all
+    
+    // 防衛的コード：古いデータで title_ko がない場合の自己修復
+    const resolved: RecentSong[] = []
+    for (const item of all) {
+      if (!item.title_ko) {
+        try {
+          const song = await db.get('songs', item.song_id)
+          if (song) {
+            item.title_ko = song.title_ko
+            item.title_ja = song.title_ja
+            item.artist = song.artist
+            await db.put('recents', item) // 補完して再保存
+            resolved.push(item)
+          } else {
+            // 曲情報もない場合は、整合性を保つためスキップ・削除
+            await db.delete('recents', item.song_id)
+          }
+        } catch (e) {
+          console.warn('Failed to heal recent song item:', e)
+        }
+      } else {
+        resolved.push(item)
+      }
+    }
+
+    return resolved
       .sort((a, b) => new Date(b.viewed_at).getTime() - new Date(a.viewed_at).getTime())
   },
 
   // 既存の呼び出し元（引数songId: string）と互換性を維持しながら、メタデータを補完して保存する
   async addRecent(songId: string): Promise<void> {
     const db = await getDB()
-    
-    // 曲情報をキャッシュから検索して取得
     const song = await db.get('songs', songId)
     
     const recentItem: RecentSong = {
@@ -140,7 +163,38 @@ export const cache = {
   async getFavoriteSongs(): Promise<FavoriteSong[]> {
     const db = await getDB()
     const all = await db.getAll('favorites')
-    return all.sort((a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime())
+    
+    // 防衛的コード：古いデータ（{ song_id, user_id } 等）で title_ko がない場合の自己修復
+    const resolved: FavoriteSong[] = []
+    for (const item of all) {
+      if (!item.title_ko) {
+        try {
+          const song = await db.get('songs', item.song_id)
+          if (song) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const rawItem = item as any
+            const healedItem: FavoriteSong = {
+              song_id: item.song_id,
+              title_ko: song.title_ko,
+              title_ja: song.title_ja,
+              artist: song.artist,
+              added_at: rawItem.added_at || new Date().toISOString()
+            }
+            await db.put('favorites', healedItem) // 新しい構造にアップデートして再保存
+            resolved.push(healedItem)
+          } else {
+            // 曲情報もない場合は、整合性を保つためスキップ・削除
+            await db.delete('favorites', item.song_id)
+          }
+        } catch (e) {
+          console.warn('Failed to heal favorite song item:', e)
+        }
+      } else {
+        resolved.push(item)
+      }
+    }
+
+    return resolved.sort((a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime())
   },
 
   async addFavoriteSong(song: Song): Promise<void> {
