@@ -8,20 +8,53 @@ export async function GET(
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('church_id')
-    .eq('id', user.id)
-    .single()
-  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+  // 認証済みユーザー: church_id スコープで取得 + 閲覧履歴記録
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('church_id')
+      .eq('id', user.id)
+      .single()
 
+    if (profile) {
+      const { data: song, error: songError } = await supabase
+        .from('songs')
+        .select('*')
+        .eq('id', id)
+        .eq('church_id', profile.church_id)
+        .maybeSingle()
+      if (songError || !song) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+      const { data: material, error: matError } = await supabase
+        .from('song_materials')
+        .select('*')
+        .eq('song_id', id)
+        .maybeSingle()
+      if (matError) return NextResponse.json({ error: matError.message }, { status: 500 })
+
+      // 閲覧履歴更新（失敗しても曲表示には影響させない）
+      try {
+        await supabase.from('user_song_activity').upsert({
+          user_id: user.id,
+          song_id: id,
+          last_viewed_at: new Date().toISOString(),
+          view_count: 1,
+        }, { onConflict: 'user_id,song_id', ignoreDuplicates: false })
+      } catch {
+        // 閲覧履歴の更新失敗は無視
+      }
+
+      return NextResponse.json({ song, material })
+    }
+  }
+
+  // 未認証 or プロフィール未作成: 公開曲（is_active=true）のみ取得
   const { data: song, error: songError } = await supabase
     .from('songs')
     .select('*')
     .eq('id', id)
-    .eq('church_id', profile.church_id)
+    .eq('is_active', true)
     .maybeSingle()
   if (songError || !song) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -30,18 +63,7 @@ export async function GET(
     .select('*')
     .eq('song_id', id)
     .maybeSingle()
-
-  if (matError) {
-    return NextResponse.json({ error: matError.message }, { status: 500 })
-  }
-
-  // 閲覧履歴更新
-  await supabase.from('user_song_activity').upsert({
-    user_id: user.id,
-    song_id: id,
-    last_viewed_at: new Date().toISOString(),
-    view_count: 1,
-  }, { onConflict: 'user_id,song_id', ignoreDuplicates: false })
+  if (matError) return NextResponse.json({ error: matError.message }, { status: 500 })
 
   return NextResponse.json({ song, material })
 }
