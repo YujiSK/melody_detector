@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { recognizeAudio, type ACRResult } from '@/lib/acrcloud'
 import { createClient } from '@/lib/supabase/server'
 
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    message: 'recognize api alive',
+  })
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -18,7 +25,6 @@ export async function POST(request: NextRequest) {
   const audioFile = formData.get('audio') as Blob
   if (!audioFile) return NextResponse.json({ error: 'No audio provided' }, { status: 400 })
 
-  // ACRCloud送信
   let result: ACRResult
   try {
     result = await recognizeAudio(audioFile)
@@ -26,7 +32,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ recognized: false, message: 'ACRCloud connection failed' })
   }
 
-  // 認識ログ記録
   const acrMatch = result.metadata?.music?.[0]
   await supabase.from('recognition_logs').insert({
     user_id: user.id,
@@ -42,7 +47,6 @@ export async function POST(request: NextRequest) {
 
   const acrId = acrMatch.acrid
 
-  // Supabase で曲検索
   const { data: song, error: songError } = await supabase
     .from('songs')
     .select('id, title_ko, title_ja, is_active')
@@ -64,7 +68,6 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // マッチログ更新
   const { error: logUpdateError } = await supabase.from('recognition_logs')
     .update({ matched_song_id: song.id })
     .eq('user_id', user.id)
@@ -76,7 +79,6 @@ export async function POST(request: NextRequest) {
     console.error('Failed to update recognition log:', logUpdateError)
   }
 
-  // 閲覧履歴を user_song_activity に記録
   const { error: activityError } = await supabase.from('user_song_activity').upsert({
     user_id: user.id,
     song_id: song.id,
