@@ -77,6 +77,16 @@ export interface RecognitionLog {
 // ローカルキャッシュ用
 export interface RecentSong {
   song_id: string
+  title_ko: string
+  title_ja?: string | null
+  artist?: string | null
   viewed_at: string
-  song?: Song
+}
+
+export interface FavoriteSong {
+  song_id: string
+  title_ko: string
+  title_ja?: string | null
+  artist?: string | null
+  added_at: string
 }

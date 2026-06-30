@@ -1,5 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb'
-import type { Song, SongMaterial, RecentSong } from '@/types'
+import type { Song, SongMaterial, RecentSong, FavoriteSong } from '@/types'
 
 const DB_NAME = 'melody-detector'
 const DB_VERSION = 3
@@ -21,8 +21,7 @@ type DB = {
   }
   favorites: {
     key: string
-    value: { song_id: string; user_id: string }
-    indexes: { 'by-user': string }
+    value: FavoriteSong
   }
 }
 
@@ -50,8 +49,7 @@ function getDB() {
           db.createObjectStore('recents', { keyPath: 'song_id' })
         }
         if (!db.objectStoreNames.contains('favorites')) {
-          const favStore = db.createObjectStore('favorites', { keyPath: 'song_id' })
-          favStore.createIndex('by-user', 'user_id')
+          db.createObjectStore('favorites', { keyPath: 'song_id' })
         }
       },
     })
@@ -92,32 +90,79 @@ export const cache = {
     await db.put('song_materials', material)
   },
 
+  // --- 履歴 (Recents) 関連 ---
   async getRecents(): Promise<RecentSong[]> {
     const db = await getDB()
     const all = await db.getAll('recents')
     return all
       .sort((a, b) => new Date(b.viewed_at).getTime() - new Date(a.viewed_at).getTime())
-      .slice(0, 20)
   },
 
+  // 既存の呼び出し元（引数songId: string）と互換性を維持しながら、メタデータを補完して保存する
   async addRecent(songId: string): Promise<void> {
     const db = await getDB()
-    await db.put('recents', { song_id: songId, viewed_at: new Date().toISOString() })
+    
+    // 曲情報をキャッシュから検索して取得
+    const song = await db.get('songs', songId)
+    
+    const recentItem: RecentSong = {
+      song_id: songId,
+      title_ko: song?.title_ko || '不明な曲',
+      title_ja: song?.title_ja || null,
+      artist: song?.artist || null,
+      viewed_at: new Date().toISOString()
+    }
+    
+    await db.put('recents', recentItem)
+
+    // 最大30件制限。溢れた古い履歴は自動削除
+    const all = await db.getAll('recents')
+    if (all.length > 30) {
+      all.sort((a, b) => new Date(a.viewed_at).getTime() - new Date(b.viewed_at).getTime())
+      const toDelete = all.slice(0, all.length - 30)
+      for (const item of toDelete) {
+        await db.delete('recents', item.song_id)
+      }
+    }
   },
 
-  async getFavorites(userId: string): Promise<string[]> {
+  async removeRecentSong(songId: string): Promise<void> {
     const db = await getDB()
-    const results = await db.getAllFromIndex('favorites', 'by-user', userId)
-    return results.map(r => r.song_id)
+    await db.delete('recents', songId)
   },
 
-  async addFavorite(userId: string, songId: string): Promise<void> {
+  async clearRecentSongs(): Promise<void> {
     const db = await getDB()
-    await db.put('favorites', { song_id: songId, user_id: userId })
+    await db.clear('recents')
   },
 
-  async removeFavorite(songId: string): Promise<void> {
+  // --- お気に入り (Favorites) 関連 ---
+  async getFavoriteSongs(): Promise<FavoriteSong[]> {
+    const db = await getDB()
+    const all = await db.getAll('favorites')
+    return all.sort((a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime())
+  },
+
+  async addFavoriteSong(song: Song): Promise<void> {
+    const db = await getDB()
+    const favItem: FavoriteSong = {
+      song_id: song.id,
+      title_ko: song.title_ko,
+      title_ja: song.title_ja,
+      artist: song.artist,
+      added_at: new Date().toISOString()
+    }
+    await db.put('favorites', favItem)
+  },
+
+  async removeFavoriteSong(songId: string): Promise<void> {
     const db = await getDB()
     await db.delete('favorites', songId)
+  },
+
+  async isFavoriteSong(songId: string): Promise<boolean> {
+    const db = await getDB()
+    const item = await db.get('favorites', songId)
+    return !!item
   },
 }
