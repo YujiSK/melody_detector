@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { Song, SongMaterial, LyricSection, LyricLine } from '@/types'
 import { cache } from '@/lib/indexeddb'
+import LyricSearchHelper from '@/components/LyricSearchHelper'
 
 // ハングル歌詞（source_lyrics）を改行分割して LyricLine.korean に安全にマッピングする関数
 function mapSourceLyricsToSections(sections: LyricSection[], sourceLyrics: string | null): LyricSection[] {
@@ -308,6 +309,14 @@ export default function AdminSongPage() {
           </span>
         </div>
 
+        {/* 歌詞検索補助 */}
+        <LyricSearchHelper
+          titleKo={song.title_ko}
+          titleJa={song.title_ja}
+          artist={song.artist}
+          textareaId="korean-lyrics-textarea"
+        />
+
         {/* 韓国語歌詞入力・カナルビ生成 */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -319,6 +328,7 @@ export default function AdminSongPage() {
             )}
           </div>
           <textarea
+            id="korean-lyrics-textarea"
             value={koreanLyrics}
             onChange={e => {
               setKoreanLyrics(e.target.value)
