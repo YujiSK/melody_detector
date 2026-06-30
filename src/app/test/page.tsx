@@ -32,6 +32,7 @@ export default function TestPage() {
   const [authUserId, setAuthUserId] = useState('')
   const [diagnoseGet, setDiagnoseGet] = useState('')
   const [diagnosePost, setDiagnosePost] = useState('')
+  const [diagnosePostFormData, setDiagnosePostFormData] = useState('')
   const [recognizeLog, setRecognizeLog] = useState<string[]>([])
   const [recognize, setRecognize] = useState<Record<string, unknown> | null>(null)
 
@@ -58,21 +59,33 @@ export default function TestPage() {
   async function runDiagnostics() {
     setDiagnoseGet('running...')
     setDiagnosePost('running...')
+    setDiagnosePostFormData('running...')
+    const requestUrl = `${window.location.origin}/api/recognize`
 
     try {
-      const getRes = await fetch('/api/recognize', { method: 'GET', cache: 'no-store' })
+      const getRes = await fetch(requestUrl, { method: 'GET', cache: 'no-store' })
       const getText = await getRes.text()
-      setDiagnoseGet(`Status: ${getRes.status}\nBody: ${getText}`)
+      setDiagnoseGet(`Request URL: ${requestUrl}\nStatus: ${getRes.status}\nResponse body: ${getText}`)
     } catch (error) {
       setDiagnoseGet(`Error: ${String(error)}`)
     }
 
     try {
-      const postRes = await fetch('/api/recognize', { method: 'POST' })
+      const postRes = await fetch(requestUrl, { method: 'POST' })
       const postText = await postRes.text()
-      setDiagnosePost(`Status: ${postRes.status}\nBody: ${postText}`)
+      setDiagnosePost(`Request URL: ${requestUrl}\nStatus: ${postRes.status}\nResponse body: ${postText}`)
     } catch (error) {
       setDiagnosePost(`Error: ${String(error)}`)
+    }
+
+    try {
+      const formData = new FormData()
+      formData.append('debug', 'true')
+      const postRes = await fetch(requestUrl, { method: 'POST', body: formData })
+      const postText = await postRes.text()
+      setDiagnosePostFormData(`Request URL: ${requestUrl}\nStatus: ${postRes.status}\nResponse body: ${postText}`)
+    } catch (error) {
+      setDiagnosePostFormData(`Error: ${String(error)}`)
     }
   }
 
@@ -121,7 +134,7 @@ export default function TestPage() {
           >
             Run API checks
           </button>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2">
             <div>
               <p className="mb-1 text-xs text-gray-500">GET /api/recognize</p>
               <pre className="max-h-40 overflow-x-auto whitespace-pre-wrap rounded bg-gray-950 p-2 font-mono text-xs leading-tight text-gray-300">{diagnoseGet || 'not run yet'}</pre>
@@ -129,6 +142,10 @@ export default function TestPage() {
             <div>
               <p className="mb-1 text-xs text-gray-500">POST /api/recognize (empty)</p>
               <pre className="max-h-40 overflow-x-auto whitespace-pre-wrap rounded bg-gray-950 p-2 font-mono text-xs leading-tight text-gray-300">{diagnosePost || 'not run yet'}</pre>
+            </div>
+            <div>
+              <p className="mb-1 text-xs text-gray-500">POST /api/recognize (FormData debug)</p>
+              <pre className="max-h-40 overflow-x-auto whitespace-pre-wrap rounded bg-gray-950 p-2 font-mono text-xs leading-tight text-gray-300">{diagnosePostFormData || 'not run yet'}</pre>
             </div>
           </div>
         </Section>

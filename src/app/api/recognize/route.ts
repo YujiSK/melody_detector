@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { recognizeAudio, type ACRResult } from '@/lib/acrcloud'
 import { createClient } from '@/lib/supabase/server'
 
@@ -9,7 +9,27 @@ export async function GET() {
   })
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
+  let formData: FormData | null = null
+  try {
+    formData = await req.formData()
+  } catch {
+    return NextResponse.json({
+      recognized: false,
+      error: 'No audio file',
+      debug: true,
+    }, { status: 400 })
+  }
+
+  const audioFile = formData.get('audio')
+  if (!(audioFile instanceof Blob)) {
+    return NextResponse.json({
+      recognized: false,
+      error: 'No audio file',
+      debug: true,
+    }, { status: 400 })
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -19,11 +39,13 @@ export async function POST(request: NextRequest) {
     .select('church_id')
     .eq('id', user.id)
     .single()
-  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-
-  const formData = await request.formData()
-  const audioFile = formData.get('audio') as Blob
-  if (!audioFile) return NextResponse.json({ error: 'No audio provided' }, { status: 400 })
+  if (!profile) {
+    return NextResponse.json({
+      recognized: false,
+      error: 'Profile not found',
+      debug: true,
+    }, { status: 403 })
+  }
 
   let result: ACRResult
   try {
