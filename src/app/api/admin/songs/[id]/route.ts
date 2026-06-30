@@ -1,98 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { profile: null, reason: 'No authenticated user session found', churchId: null }
-  }
-
-  const adminSupabase = await createAdminClient()
-
-  try {
-    let { data: profile } = await adminSupabase
-      .from('profiles')
-      .select('id, display_name')
-      .eq('id', user.id)
-      .single()
-
-    let { data: member } = await adminSupabase
-      .from('church_members')
-      .select('church_id, role')
-      .eq('user_id', user.id)
-      .single()
-
-    const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true'
-
-    if (!profile || !member) {
-      let churchId = ''
-      const { data: existingChurches } = await adminSupabase
-        .from('churches')
-        .select('id')
-        .limit(1)
-      
-      if (existingChurches && existingChurches.length > 0) {
-        churchId = existingChurches[0].id
-      } else {
-        const { data: newChurch, error: churchErr } = await adminSupabase
-          .from('churches')
-          .insert({ name: 'Default Church' })
-          .select('id')
-          .single()
-        if (churchErr) throw new Error(`Auto-Setup (church creation failed): ${churchErr.message}`)
-        if (newChurch) churchId = newChurch.id
-      }
-
-      if (!churchId) {
-        throw new Error('Auto-Setup (church ID could not be resolved)')
-      }
-
-      if (!profile) {
-        const displayName = user.email?.split('@')[0] || 'User'
-        const { data: newProfile, error: profileErr } = await adminSupabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            display_name: displayName,
-          })
-          .select('id, display_name')
-          .single()
-
-        if (profileErr) throw new Error(`Auto-Setup (profile creation failed): ${profileErr.message}`)
-        if (newProfile) {
-          profile = newProfile
-        }
-      }
-
-      if (!member) {
-        const { data: newMember, error: memberErr } = await adminSupabase
-          .from('church_members')
-          .insert({
-            church_id: churchId,
-            user_id: user.id,
-            role: 'admin',
-          })
-          .select('church_id, role')
-          .single()
-        if (memberErr) throw new Error(`Auto-Setup (membership mapping failed): ${memberErr.message}`)
-        if (newMember) member = newMember
-      }
-    }
-
-    if (!member) {
-      throw new Error('Auto-Setup failed to resolve membership')
-    }
-
-    if (!disableAuth && member.role !== 'admin') {
-      return { profile: null, reason: `User role is not admin (actual role: ${member.role})`, churchId: null }
-    }
-
-    return { profile, reason: null, churchId: member.church_id }
-
-  } catch (err) {
-    const error = err as Error
-    return { profile: null, reason: error.message || 'Database exception during admin validation', churchId: null }
-  }
+  if (!user) return null
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, church_id, role')
+    .eq('id', user.id)
+    .single()
+  if (!profile || profile.role !== 'admin') return null
+  return profile
 }
 
 export async function PATCH(
@@ -101,41 +19,38 @@ export async function PATCH(
 ) {
   const { id } = await params
   const supabase = await createClient()
-  const check = await requireAdmin(supabase)
-  if (!check.profile || !check.churchId) {
-    return NextResponse.json({
-      error: 'Forbidden',
-      reason: check.reason
-    }, { status: 403 })
-  }
-  const churchId = check.churchId
+  const profile = await requireAdmin(supabase)
+  if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
-  const { title, title_ja, artist, acrcloud_music_id, is_active } = body
+  const { title_ko, title, title_ja, artist, acrcloud_music_id, acrcloud_external_id, is_active, status } = body
 
-  const adminSupabase = await createAdminClient()
-  const { data, error } = await adminSupabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateData: Record<string, any> = {}
+  if (title_ko !== undefined || title !== undefined) {
+    updateData.title_ko = title_ko !== undefined ? title_ko : title
+  }
+  if (title_ja !== undefined) updateData.title_ja = title_ja
+  if (artist !== undefined) updateData.artist = artist
+  if (acrcloud_music_id !== undefined) updateData.acrcloud_music_id = acrcloud_music_id
+  if (acrcloud_external_id !== undefined) updateData.acrcloud_external_id = acrcloud_external_id
+  
+  if (is_active !== undefined) {
+    updateData.is_active = is_active
+  } else if (status !== undefined) {
+    updateData.is_active = status === 'ready'
+  }
+
+  const { data, error } = await supabase
     .from('songs')
-    .update({
-      title_ko: title,
-      title_ja,
-      artist,
-      acrcloud_music_id,
-      is_active
-    })
+    .update(updateData)
     .eq('id', id)
-    .eq('church_id', churchId)
+    .eq('church_id', profile.church_id)
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  const formattedSong = {
-    ...data,
-    title: data.title_ko
-  }
-
-  return NextResponse.json({ song: formattedSong })
+  return NextResponse.json({ song: data })
 }
 
 export async function DELETE(
@@ -144,21 +59,14 @@ export async function DELETE(
 ) {
   const { id } = await params
   const supabase = await createClient()
-  const check = await requireAdmin(supabase)
-  if (!check.profile || !check.churchId) {
-    return NextResponse.json({
-      error: 'Forbidden',
-      reason: check.reason
-    }, { status: 403 })
-  }
-  const churchId = check.churchId
+  const profile = await requireAdmin(supabase)
+  if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const adminSupabase = await createAdminClient()
-  const { error } = await adminSupabase
+  const { error } = await supabase
     .from('songs')
     .delete()
     .eq('id', id)
-    .eq('church_id', churchId)
+    .eq('church_id', profile.church_id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
