@@ -2,7 +2,7 @@ import { openDB, type IDBPDatabase } from 'idb'
 import type { Song, SongMaterial, RecentSong } from '@/types'
 
 const DB_NAME = 'melody-detector'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 type DB = {
   songs: {
@@ -73,7 +73,18 @@ export const cache = {
   async getSongMaterial(songId: string): Promise<SongMaterial | undefined> {
     const db = await getDB()
     const results = await db.getAllFromIndex('song_materials', 'by-song', songId)
-    return results[0]
+    const material = results[0]
+    if (material) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawMat = material as any
+      if (rawMat.sections && !material.kanarubi_document) {
+        material.kanarubi_document = { sections: rawMat.sections }
+      }
+      if (rawMat.raw_korean && !material.source_lyrics) {
+        material.source_lyrics = rawMat.raw_korean
+      }
+    }
+    return material
   },
 
   async putSongMaterial(material: SongMaterial): Promise<void> {

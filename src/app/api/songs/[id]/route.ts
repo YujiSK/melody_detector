@@ -17,19 +17,23 @@ export async function GET(
     .single()
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
-  const { data: song } = await supabase
+  const { data: song, error: songError } = await supabase
     .from('songs')
     .select('*')
     .eq('id', id)
     .eq('church_id', profile.church_id)
-    .single()
-  if (!song) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    .maybeSingle()
+  if (songError || !song) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { data: material } = await supabase
+  const { data: material, error: matError } = await supabase
     .from('song_materials')
     .select('*')
     .eq('song_id', id)
-    .single()
+    .maybeSingle()
+
+  if (matError) {
+    return NextResponse.json({ error: matError.message }, { status: 500 })
+  }
 
   // 閲覧履歴更新
   await supabase.from('user_song_activity').upsert({

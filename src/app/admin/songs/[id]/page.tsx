@@ -20,7 +20,7 @@ export default function AdminSongPage() {
       .then(d => {
         setSong(d.song)
         setMaterial(d.material)
-        if (d.material?.raw_korean) setKoreanLyrics(d.material.raw_korean)
+        if (d.material?.source_lyrics) setKoreanLyrics(d.material.source_lyrics)
       })
   }, [id])
 
@@ -37,7 +37,7 @@ export default function AdminSongPage() {
     setGenerating(false)
     if (!res.ok) { setMessage(`エラー: ${data.error}`); return }
     setMaterial(data.material)
-    setSong(s => s ? { ...s, status: 'ready' } : s)
+    setSong(s => s ? { ...s, is_active: true } : s)
     setMessage('カナルビを生成しました')
   }
 
@@ -62,7 +62,7 @@ export default function AdminSongPage() {
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
           </Link>
-          <h1 className="text-white font-semibold truncate">{song.title}</h1>
+          <h1 className="text-white font-semibold truncate">{song.title_ko}</h1>
         </div>
         <button onClick={deleteSong} className="text-red-400 text-sm hover:text-red-300 transition-colors shrink-0 ml-3">
           削除
@@ -72,15 +72,15 @@ export default function AdminSongPage() {
       <div className="px-4 py-6 space-y-6 max-w-2xl">
         {/* 曲情報 */}
         <div className="bg-gray-900 rounded-xl p-4 space-y-1">
-          <p className="text-white font-medium">{song.title}</p>
+          <p className="text-white font-medium">{song.title_ko}</p>
           {song.title_ja && <p className="text-gray-400 text-sm">{song.title_ja}</p>}
           {song.artist && <p className="text-gray-500 text-xs">{song.artist}</p>}
           {song.acrcloud_music_id && (
             <p className="text-gray-600 text-xs font-mono mt-1">ACR: {song.acrcloud_music_id.slice(0, 16)}…</p>
           )}
           <span className={`inline-block text-xs px-2 py-0.5 rounded-full mt-1
-            ${song.status === 'ready' ? 'bg-green-900/50 text-green-400' : 'bg-yellow-900/50 text-yellow-400'}`}>
-            {song.status === 'ready' ? '公開中' : '準備中'}
+            ${song.is_active ? 'bg-green-900/50 text-green-400' : 'bg-yellow-900/50 text-yellow-400'}`}>
+            {song.is_active ? '公開中' : '準備中'}
           </span>
         </div>
 

@@ -20,7 +20,7 @@ function SongItem({ song }: { song: Song }) {
         </svg>
       </div>
       <div className="min-w-0">
-        <p className="text-white text-sm font-medium truncate">{song.title}</p>
+        <p className="text-white text-sm font-medium truncate">{song.title_ko}</p>
         {song.title_ja && <p className="text-gray-400 text-xs truncate">{song.title_ja}</p>}
         {song.artist && <p className="text-gray-500 text-xs truncate">{song.artist}</p>}
       </div>
@@ -53,7 +53,7 @@ export default function SearchPage() {
   }, [query, search])
 
   useEffect(() => {
-    search('')
+    Promise.resolve().then(() => search(''))
   }, [search])
 
   return (

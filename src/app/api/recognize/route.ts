@@ -43,12 +43,16 @@ export async function POST(request: NextRequest) {
   const acrId = acrMatch.acrid
 
   // Supabase で曲検索
-  const { data: song } = await supabase
+  const { data: song, error: songError } = await supabase
     .from('songs')
-    .select('id, title, title_ja, status')
+    .select('id, title_ko, title_ja, is_active')
     .eq('church_id', profile.church_id)
     .eq('acrcloud_music_id', acrId)
-    .single()
+    .maybeSingle()
+
+  if (songError) {
+    return NextResponse.json({ error: songError.message }, { status: 500 })
+  }
 
   if (!song) {
     return NextResponse.json({
@@ -61,15 +65,19 @@ export async function POST(request: NextRequest) {
   }
 
   // マッチログ更新
-  await supabase.from('recognition_logs')
+  const { error: logUpdateError } = await supabase.from('recognition_logs')
     .update({ matched_song_id: song.id })
     .eq('user_id', user.id)
     .eq('acrcloud_music_id', acrId)
     .order('created_at', { ascending: false })
     .limit(1)
 
+  if (logUpdateError) {
+    console.error('Failed to update recognition log:', logUpdateError)
+  }
+
   // 閲覧履歴を user_song_activity に記録
-  await supabase.from('user_song_activity').upsert({
+  const { error: activityError } = await supabase.from('user_song_activity').upsert({
     user_id: user.id,
     song_id: song.id,
     last_viewed_at: new Date().toISOString(),
@@ -79,12 +87,17 @@ export async function POST(request: NextRequest) {
     ignoreDuplicates: false,
   })
 
+  if (activityError) {
+    console.error('Failed to upsert activity log:', activityError)
+  }
+
   return NextResponse.json({
     recognized: true,
     registered: true,
     song_id: song.id,
-    title: song.title,
+    title: song.title_ko,
     title_ja: song.title_ja,
-    status: song.status,
+    status: song.is_active ? 'ready' : 'pending',
+    is_active: song.is_active,
   })
 }

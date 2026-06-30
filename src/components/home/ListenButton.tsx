@@ -8,7 +8,7 @@ import { cache } from '@/lib/indexeddb'
 type RecognizeResult =
   | { recognized: false; message: string }
   | { recognized: true; registered: false; acrcloud_music_id: string; title: string; artist?: string | null }
-  | { recognized: true; registered: true; song_id: string; title: string; title_ja?: string | null; status: string }
+  | { recognized: true; registered: true; song_id: string; title: string; title_ja?: string | null; is_active: boolean }
 
 type UIState = 'idle' | 'recording' | 'processing' | 'fail_not_found' | 'fail_unregistered'
 

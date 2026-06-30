@@ -17,7 +17,7 @@ export default async function AdminPage() {
 
   const { data: songs } = await supabase
     .from('songs')
-    .select('id, title, title_ja, artist, status, created_at')
+    .select('id, title_ko, title_ja, artist, is_active, created_at')
     .eq('church_id', profile.church_id)
     .order('created_at', { ascending: false })
 
@@ -52,16 +52,16 @@ export default async function AdminPage() {
               className="flex items-center gap-3 bg-gray-900 rounded-xl px-4 py-3 hover:bg-gray-800 transition-colors"
             >
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-medium truncate">{song.title}</p>
+                <p className="text-white text-sm font-medium truncate">{song.title_ko}</p>
                 {song.title_ja && <p className="text-gray-400 text-xs truncate">{song.title_ja}</p>}
               </div>
               <span className={`text-xs px-2 py-0.5 rounded-full shrink-0
-                ${song.status === 'ready'
+                ${song.is_active
                   ? 'bg-green-900/50 text-green-400'
                   : 'bg-yellow-900/50 text-yellow-400'
                 }`}
               >
-                {song.status === 'ready' ? '公開中' : '準備中'}
+                {song.is_active ? '公開中' : '準備中'}
               </span>
             </Link>
           ))}

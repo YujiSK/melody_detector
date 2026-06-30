@@ -6,7 +6,7 @@ async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) 
   if (!user) return null
   const { data: profile } = await supabase
     .from('profiles')
-    .select('church_id, role')
+    .select('id, church_id, role')
     .eq('id', user.id)
     .single()
   if (!profile || profile.role !== 'admin') return null
@@ -23,11 +23,27 @@ export async function PATCH(
   if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
-  const { title, title_ja, artist, acrcloud_music_id, status } = body
+  const { title_ko, title, title_ja, artist, acrcloud_music_id, acrcloud_external_id, is_active, status } = body
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateData: Record<string, any> = {}
+  if (title_ko !== undefined || title !== undefined) {
+    updateData.title_ko = title_ko !== undefined ? title_ko : title
+  }
+  if (title_ja !== undefined) updateData.title_ja = title_ja
+  if (artist !== undefined) updateData.artist = artist
+  if (acrcloud_music_id !== undefined) updateData.acrcloud_music_id = acrcloud_music_id
+  if (acrcloud_external_id !== undefined) updateData.acrcloud_external_id = acrcloud_external_id
+  
+  if (is_active !== undefined) {
+    updateData.is_active = is_active
+  } else if (status !== undefined) {
+    updateData.is_active = status === 'ready'
+  }
 
   const { data, error } = await supabase
     .from('songs')
-    .update({ title, title_ja, artist, acrcloud_music_id, status })
+    .update(updateData)
     .eq('id', id)
     .eq('church_id', profile.church_id)
     .select()

@@ -35,7 +35,9 @@ function SectionBlock({ section }: { section: LyricSection }) {
 }
 
 export default function KanaDisplay({ material, songTitle, songTitleJa }: Props) {
-  const sorted = [...material.sections].sort((a, b) => {
+  const sections = material.kanarubi_document?.sections ?? []
+
+  const sorted = [...sections].sort((a, b) => {
     const ai = SECTION_ORDER.indexOf(a.type)
     const bi = SECTION_ORDER.indexOf(b.type)
     if (ai === -1 && bi === -1) return 0
@@ -50,9 +52,15 @@ export default function KanaDisplay({ material, songTitle, songTitleJa }: Props)
         <h1 className="text-white text-2xl font-bold">{songTitle}</h1>
         {songTitleJa && <p className="text-gray-400 text-sm mt-1">{songTitleJa}</p>}
       </div>
-      {sorted.map((section, i) => (
-        <SectionBlock key={i} section={section} />
-      ))}
+      {sorted.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 text-sm">
+          カナルビデータが空であるか、まだ準備できていません。
+        </div>
+      ) : (
+        sorted.map((section, i) => (
+          <SectionBlock key={i} section={section} />
+        ))
+      )}
     </div>
   )
 }

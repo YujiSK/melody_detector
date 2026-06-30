@@ -17,12 +17,14 @@ export interface Profile {
 
 export interface Song {
   id: string
-  church_id: string
-  title: string
+  church_id: string | null
+  title_ko: string
   title_ja: string | null
   artist: string | null
   acrcloud_music_id: string | null
-  status: 'pending' | 'ready'
+  acrcloud_external_id: string | null
+  is_active: boolean
+  created_by: string | null
   created_at: string
   updated_at: string
 }
@@ -42,9 +44,10 @@ export interface LyricLine {
 export interface SongMaterial {
   id: string
   song_id: string
-  church_id: string
-  sections: LyricSection[]
-  raw_korean: string | null
+  kanarubi_document: {
+    sections: LyricSection[]
+  } | null
+  source_lyrics: string | null
   created_at: string
   updated_at: string
 }
